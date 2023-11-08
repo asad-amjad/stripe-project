@@ -5,7 +5,7 @@ import { Button } from "reactstrap";
 
 import SubscriptionForm from "../components/SubscriptionForm";
 import LoginModal from "../components/LoginModal";
-import api from "../components-home3/api";
+import api from "../api";
 
 function Subscription() {
   const [modal, setModal] = useState(false);

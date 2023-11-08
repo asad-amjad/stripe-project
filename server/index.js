@@ -1,26 +1,15 @@
 const express = require("express");
 const app = express();
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const { getProductDetails, getSubscriptionDetails } = require("./data");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors());
-
-let getProductDetails = () => {
-  return { currency: "usd", amount: 1099, name: "lemon" };
-};
-
-const getSubscriptionDetails = () => {
-  return {
-    currency: "usd",
-    amount: 500, // Monthly subscription amount in cents
-    name: "Subscription Name",
-  };
-};
 
 app.get("/public-key", (req, res) => {
   res.send({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
@@ -36,34 +25,13 @@ app.get("/subscription-details", (req, res) => {
   res.send(data);
 });
 
-app.post("/create-payment-intent", async (req, res) => {
-  const body = req.body;
-  const productDetails = getProductDetails();
-  const customerId = req.body.customerId;
-
-  const options = {
-    ...body,
-    amount: productDetails.amount,
-    currency: productDetails.currency,
-    customer: customerId,
-  };
-
-  try {
-    const paymentIntent = await stripe.paymentIntents.create(options);
-    res.json(paymentIntent);
-  } catch (err) {
-    res.json(err);
-  }
-});
-
-const transactionsDatabase = [];
-
 // Step 1: Create a Customer
 app.post("/create-customer", async (req, res) => {
   try {
     const customer = await stripe.customers.create({
       email: req.body.email,
       name: req.body.name,
+      description: "Register from app name", // Add a description from the request body
     });
 
     res.json({ customerId: customer.id });
@@ -73,10 +41,56 @@ app.post("/create-customer", async (req, res) => {
   }
 });
 
+app.post("/create-payment-intent", async (req, res) => {
+  const body = req.body;
+  const productDetails = getProductDetails();
+  const customerId = req.body.customerId;
+
+  const options = {
+    // ...body,
+    amount: productDetails.amount,
+    currency: productDetails.currency,
+    customer: customerId,
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  };
+  try {
+    const paymentIntent = await stripe.paymentIntents.create(options);
+    // console.log(paymentIntent)
+    // res.json(paymentIntent);
+    res.json({ clientSec: paymentIntent.client_secret });
+  } catch (err) {
+    return res.json(err);
+  }
+});
+
+// app.post("/create-payment-intent", async (req, res) => {
+//   const body = req.body;
+//   const productDetails = getProductDetails();
+//   const customerId = req.body.customerId;
+
+//   const options = {
+//     ...body,
+//     amount: productDetails.amount,
+//     currency: productDetails.currency,
+//     customer: customerId,
+//   };
+
+//   try {
+//     const paymentIntent = await stripe.paymentIntents.create(options);
+//     console.log(paymentIntent)
+//     res.json(paymentIntent);
+//   } catch (err) {
+//     res.json(err);
+//   }
+// });
+
+// const transactionsDatabase = [];
+
 // Step 2: Purchase a Product
 app.post("/purchase-product", async (req, res) => {
   try {
-    console.log(req.body)
     const customerId = req.body.customerId;
     const productPriceInCents = 1000;
     const quantity = 1;
@@ -86,13 +100,13 @@ app.post("/purchase-product", async (req, res) => {
       amount: productPriceInCents * quantity,
       currency: "usd",
       customer: customerId,
+      payment_method_types: ["card"],
       //Othe Options
       // automatic_payment_methods: {enabled: true},
       // confirm:true
     });
 
     // TODO: Store the transaction in the database
-
     res.json({ client_secret: paymentIntent.client_secret });
   } catch (error) {
     console.error("Error creating PaymentIntent:", error);
@@ -110,80 +124,6 @@ app.post("/purchase-product", async (req, res) => {
     }
   }
 });
-
-// app.post("/purchase-product", async (req, res) => {
-//   try {
-//     const customerId = req.body.customerId;
-//     const productId = "prod_OuSY5EHKJsmgJU"; // Product ID from your dashboard
-//     const quantity = 1;
-
-//     // Fetch the product price from the Stripe catalog using the product ID
-//     const product = await stripe.products.retrieve(productId);
-
-//     if (!product) {
-//       return res.status(404).json({ error: "Product not found" });
-//     }
-//     console.log(product);
-//     // Find the appropriate price for the product
-//     // const price = product.prices.find(price => price.currency === 'usd');
-
-//     const defaultPriceId = product.default_price;
-
-//     // Retrieve the default price using the price ID
-//     const defaultPrice = await stripe.prices.retrieve(defaultPriceId);
-//     console.log(defaultPrice);
-//     // return defaultPrice;
-
-//     if (!price) {
-//       return res.status(404).json({ error: "Price not found for the product" });
-//     }
-
-//     // Create a PaymentIntent using the product's price
-//     const paymentIntent = await stripe.paymentIntents.create({
-//       amount: price.unit_amount * quantity,
-//       currency: price.currency,
-//       customer: customerId,
-//     });
-//     // console.log(paymentIntent)
-//     // Store the transaction in the database
-
-//     res.json({ client_secret: paymentIntent.client_secret });
-//   } catch (error) {
-//     console.error("Error purchasing product:", error);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// });
-
-// app.post("/purchase-product", async (req, res) => {
-//   try {
-//     const customerId = req.body.customerId;
-//     const priceId = "price_12345"; // Replace with the specific price ID you want to use
-//     const quantity = 1;
-
-//     // Create a PaymentIntent using the price ID
-//     const paymentIntent = await stripe.paymentIntents.create({
-//       amount: null, // You don't need to specify the amount when using a price ID
-//       currency: "usd", // Replace with the desired currency
-//       customer: customerId,
-//       payment_method_types: ["card"], // Add other payment method types as needed
-//       confirm: true, // Set to true if you want to confirm the PaymentIntent immediately
-//       setup_future_usage: "off_session", // Set to 'off_session' if the payment is not intended for immediate use
-//       item_list: [
-//         {
-//           price: priceId, // Specify the price ID
-//           quantity: quantity,
-//         },
-//       ],
-//     });
-
-//     // Store the transaction in the database
-
-//     res.json({ client_secret: paymentIntent.client_secret });
-//   } catch (error) {
-//     console.error("Error purchasing product:", error);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// });
 
 // Step 2: Create a Subscription with the attached PaymentMethod
 app.post("/create-subscription", async (req, res) => {
@@ -206,15 +146,13 @@ app.post("/create-subscription", async (req, res) => {
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
-      // paymentMethodId: paymentMethodId,
       items: [
         {
           price: "price_1O6HlaKwiRWUgRBf2GvkmmYd", // TODO:env
         },
       ],
-      default_payment_method: req.body.paymentMethodId, // Use the attached PaymentMethod
+      default_payment_method: req.body.paymentMethodId,
     });
-    console.log(subscription);
 
     res.json({ subscription }); // res.json({ client_secret: paymentIntent.client_secret }); // Change the key to "client_secret"
   } catch (error) {
@@ -245,8 +183,6 @@ app.post("/cancel-subscription", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-// Define more routes for managing subscription-related operations as needed
 
 // Step 3: Retrieve Customer Information and Transaction History
 app.get("/get-customer/:customerId", async (req, res) => {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
+import { Button, Modal, ModalHeader, ModalBody, ModalFooter, Input } from "reactstrap";
 import axios from "axios";
 
 function LoginModal({ loginModal, setLoginModal }) {
@@ -33,7 +33,7 @@ function LoginModal({ loginModal, setLoginModal }) {
         <ModalBody>
           <div className="mt-2">
             <label>Your Name:</label>
-            <input
+            <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -43,7 +43,7 @@ function LoginModal({ loginModal, setLoginModal }) {
           
           <div className="mt-4 mb-4">
             <label>Your Email:</label>
-            <input
+            <Input
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

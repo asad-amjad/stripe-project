@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "reactstrap";
 import {
   PaymentElement,
-  Elements,
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
@@ -18,54 +17,57 @@ const CheckoutForm = ({ open, toggle }) => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (elements == null) {
+    // if (elements == null) {
+    //   return;
+    // }
+
+    if(!stripe || !elements){
       return;
     }
-
+console.log(stripe, elements)
     // Trigger form validation and wallet collection
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      // Show error to your customer
-      setErrorMessage(submitError.message);
-      return;
-    }
+    // const { error: submitError } = await elements.submit();
+    // if (submitError) {
+    //   // Show error to your customer
+    //   setErrorMessage(submitError.message);
+    //   return;
+    // }
 
-    // Create the PaymentIntent and obtain clientSecret from your server endpoint
-    const res = await fetch("http://localhost:4000/purchase-product", {
-      method: "POST",
-      body: JSON.stringify({ customerId }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    // // Create the PaymentIntent and obtain clientSecret from your server endpoint
+    // const res = await fetch("http://localhost:4000/purchase-product", {
+    //   method: "POST",
+    //   body: JSON.stringify({ customerId: customerId }),
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    // });
 
-    if (!res.ok) {
-      throw new Error(`Server response error: ${res.status} ${res.statusText}`);
-    }
+    // if (!res.ok) {
+    //   throw new Error(`Server response error: ${res.status} ${res.statusText}`);
+    // }
 
-    const { client_secret: clientSecret } = await res.json();
-    
-    if (!clientSecret) {
-      throw new Error("Invalid or missing clientSecret from the server");
-    }
+    // const { client_secret: clientSecret } = await res.json();
 
+    // if (!clientSecret) {
+    //   throw new Error("Invalid or missing clientSecret from the server");
+    // }
+    // setIsProcessing(true)
 
     const { error } = await stripe.confirmPayment({
       elements,
-      clientSecret,
-      payment_method: {
-        card: elements.getElement(PaymentElement),
-        billing_details: {
-          email: customerEmail,
-
-        },
-      },
+      // clientSecret,
+      // payment_method: {
+      //   card: elements.getElement(PaymentElement),
+      //   billing_details: {
+      //     email: customerEmail,
+      //   },
+      // },
       confirmParams: {
-        return_url: "http://localhost:3000/success",
-        error_on_requires_action: true,
-        receipt_email: customerEmail,
+        return_url: `${window.location.origin}/success`,
+        // error_on_requires_action: true,
+        // receipt_email: customerEmail,
       },
-      setup_future_usage: true,
+      // setup_future_usage: true,
     });
 
     if (error) {

@@ -8,6 +8,7 @@ const createPaymentIntent = options => {
       body: JSON.stringify(options)
     })
     .then(res => {
+      
       if (res.status === 200) {
         return res.json();
       } else {
@@ -101,7 +102,7 @@ const getPublicStripeKey = options => {
 };
 
 const api = {
-  createPaymentIntent,
+  createPaymentIntent:createPaymentIntent,
   getPublicStripeKey: getPublicStripeKey,
   getProductDetails: getProductDetails,
   getSubscriptionDetails: getSubscriptionDetails,
