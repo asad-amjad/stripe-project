@@ -20,16 +20,21 @@ app.get("/product-details", (req, res) => {
   res.send(data);
 });
 
-app.get("/subscription-details", (req, res) => {
-  let data = getSubscriptionDetails();
-  res.send(data);
+//Product Id for subscription Plans
+app.get("/home-plans", (req, res) => {
+  res.send({
+    plan_a: process.env.STRIPE_HOME_PLAN_A,
+    plan_b: process.env.STRIPE_HOME_PLAN_B,
+    plan_c: process.env.STRIPE_HOME_PLAN_C,
+  });
 });
 
 app.post("/create-customer", async (req, res) => {
+  const { email, name, description } = req.body;
   try {
     const customer = await stripe.customers.create({
-      email: req.body.email,
-      name: req.body.name,
+      email: email,
+      name: name,
       description: "Register from app name", // Add a description from the request body
     });
 
@@ -40,7 +45,7 @@ app.post("/create-customer", async (req, res) => {
   }
 });
 
-// New endpoint for getting product details from Stripe
+// Get product details from Stripe
 app.get("/get-product-details/:productId", async (req, res) => {
   const productId = req.params.productId;
   try {
@@ -49,14 +54,10 @@ app.get("/get-product-details/:productId", async (req, res) => {
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
+
     if (product) {
       const price = await stripe.prices.retrieve(product.default_price);
-      product.priceDetails = price; //Send price details
-
-      const coupons = await stripe.coupons.list({
-        limit: 3,
-      });
-      product.allCop = coupons; //Send price details
+      product.extended_price_details = price; //Send price details
     }
 
     res.json({ product });
@@ -66,13 +67,13 @@ app.get("/get-product-details/:productId", async (req, res) => {
   }
 });
 
-// Step 1: Create a Customer
+// Customer payment method list
 app.post("/payment-method-list", async (req, res) => {
   const { customerId } = req.body;
   try {
     const paymentMethods = await stripe.paymentMethods.list({
       customer: customerId,
-      // type: 'card', // You can specify the type of payment methods you want to retrieve
+      // type: 'card',
     });
     // res.json({ paymentMethods });
     res.json({ paymentMethods: paymentMethods.data });
@@ -82,11 +83,11 @@ app.post("/payment-method-list", async (req, res) => {
   }
 });
 
-
+// Pending: Attch payment method to customer
 app.post("/attach-payment-method", async (req, res) => {
   const { customerId, paymentMethodId } = req.body;
   try {
-    console.log(customerId, paymentMethodId);
+    // console.log(customerId, paymentMethodId);
     // Attach the payment method to the customer
     // await stripe.paymentMethods.attach(paymentMethodId, {
     //   customer: customerId,
@@ -115,7 +116,7 @@ app.post("/attach-payment-method", async (req, res) => {
 
 app.post("/create-payment-intent", async (req, res) => {
   const body = req.body;
-  const productDetails = getProductDetails();
+  const productDetails = getProductDetails(); //TODO: Use stripe product id for details
   const customerId = req.body.customerId;
 
   const options = {
@@ -123,7 +124,6 @@ app.post("/create-payment-intent", async (req, res) => {
     currency: productDetails.currency,
     customer: customerId,
     // setup_future_usage: 'off_session',
-
     // save_payment_method:true,
     // off_session: true,
     // confirm: true,
@@ -134,52 +134,49 @@ app.post("/create-payment-intent", async (req, res) => {
 
   try {
     const paymentIntent = await stripe.paymentIntents.create(options);
-
-    // const paymentMethodId = paymentIntent.payment_method;
-    // if (paymentMethodId) {
-    //   await stripe.paymentMethods.attach(paymentMethodId, {
-    //     customer: customerId,
-    //   });
-    // }
-
-    // // Set the payment method as the default for the customer
-    // await stripe.customers.update(customerId, {
-    //   invoice_settings: {
-    //     default_payment_method: paymentMethodId,
-    //   },
-    // });
-
     res.json({ clientSec: paymentIntent.client_secret });
   } catch (err) {
     return res.json(err);
   }
+});
 
-  // try {
-  //   const paymentMethodId = paymentIntent.payment_method;
+app.post("/validate-coupon", async (req, res) => {
+  const { couponCode } = req.body;
 
-  //   console.log(paymentIntent);
-  //   if (paymentMethodId) {
-  //     // Use the PaymentMethod ID for further actions if needed
-  //     // For example, you can attach it to the customer
-  //     const dd = await stripe.paymentMethods.attach(paymentMethodId, {
-  //       customer: customerId,
-  //     });
-  //     console.log(dd);
-  //   }
+  try {
+    const promotionCodes = await stripe.promotionCodes.list({
+      limit: 10,
+    });
 
-  //   // res.json({  });
-  // } catch (err) {
-  //   // return res.json(err);
-  // }
+    const promotion = promotionCodes?.data?.find(
+      (promo) => promo.code === couponCode
+    );
+
+    if (!promotion) {
+      res.json({ valid: false, error: "In valid" });
+    }
+
+    if (promotion) {
+      const couponDetails = {
+        couponId: promotion.coupon.id,
+        couponName: promotion.coupon.name,
+        percentageOff: promotion.coupon.percent_off,
+      };
+
+      res.json({ valid: true, couponDetails });
+    }
+  } catch (error) {
+    res.json({ valid: false, error: error.message });
+  }
 });
 
 // Step 2: Create a Subscription with the attached PaymentMethod
 app.post("/create-subscription", async (req, res) => {
   const customerId = req.body.customerId;
-  const paymentMethodId = req.body.paymentMethodId; // Add paymentMethodId to the request
-
-  // const paymentMethodId = req.body.paymentMethodId;
-  // const subscriptionDetails = getSubscriptionDetails();
+  const priceId = req.body.priceId;
+  const paymentMethodId = req.body.paymentMethodId;
+  const subscriptionDescription = req.body.subscriptionDescription;
+  const coupon = req.body.coupon;
   try {
     await stripe.paymentMethods.attach(paymentMethodId, {
       customer: customerId,
@@ -196,16 +193,20 @@ app.post("/create-subscription", async (req, res) => {
       customer: customerId,
       items: [
         {
-          price: "price_1O6HlaKwiRWUgRBf2GvkmmYd", // TODO:env
+          price: priceId,
         },
       ],
+      coupon: coupon,
       default_payment_method: req.body.paymentMethodId,
+      description: subscriptionDescription,
     });
-
-    res.json({ subscription }); // res.json({ client_secret: paymentIntent.client_secret }); // Change the key to "client_secret"
+    res.json({ subscriptionId: subscription.id });
   } catch (error) {
     console.error("Error creating subscription:", error);
-    res.status(500).json({ error: "Error creating subscription" });
+
+    res
+      .status(500)
+      .json({ error: "Subscription creation failed. Please try again later." });
   }
 });
 

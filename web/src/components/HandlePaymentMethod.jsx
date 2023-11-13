@@ -35,7 +35,7 @@ const HandlePaymentMethod = ({ open, toggle }) => {
     //   elements: elements.getElement(PaymentElement),
     // });
 
-    console.log(token)
+    // console.log(token)
 
     if (error) {
       setError(error.message);
