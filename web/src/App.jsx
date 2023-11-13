@@ -7,6 +7,7 @@ import History from "./pages/History";
 import "./App.css";
 import Home from "./pages/Home";
 import Subscription from "./pages/Subscription";
+import Settings from "./pages/Settings";
 
 const App = () => {
   return (
@@ -16,12 +17,14 @@ const App = () => {
           <NavLink to="/">Single</NavLink>
           <NavLink to="/subscription">Subscription</NavLink>
           <NavLink to="/history">History</NavLink>
+          <NavLink to="/settings">Settings</NavLink>
         </nav>
 
         <Routes>
           <Route exact path="/" element={<Home />} />
           <Route exact path="/subscription" element={<Subscription />} />
           <Route exact path="/history" element={<History />} />
+          <Route exact path="/settings" element={<Settings />} />
           <Route path="*" element={<h1>Not found</h1>} />
         </Routes>
       </Router>

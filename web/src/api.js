@@ -1,46 +1,19 @@
-const createPaymentIntent = options => {
-  return window
-    .fetch(`http://localhost:4000/create-payment-intent`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(options)
-    })
-    .then(res => {
-      
-      if (res.status === 200) {
-        return res.json();
-      } else {
-        return null;
-      }
-    })
-    .then(data => {
-      if (!data || data.error) {
-        console.log("API error:", { data });
-        throw new Error("PaymentIntent API Error");
-      } else {
-        return data.client_secret;
-      }
-    });
-};
-
-const getProductDetails = options => {
+const getProductDetails = (options) => {
   return window
     .fetch(`http://localhost:4000/product-details`, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.status === 200) {
         return res.json();
       } else {
         return null;
       }
     })
-    .then(data => {
+    .then((data) => {
       if (!data || data.error) {
         console.log("API error:", { data });
         throw Error("API Error");
@@ -50,23 +23,47 @@ const getProductDetails = options => {
     });
 };
 
+const getProductDetailById = (productId) => {
+  return window
+    .fetch(`http://localhost:4000/get-product-details/${productId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+    .then((res) => {
+      if (res.status === 200) {
+        return res.json();
+      } else {
+        return null;
+      }
+    })
+    .then((data) => {
+      if (!data || data.error) {
+        console.log("API error:", { data });
+        throw Error("API Error");
+      } else {
+        return data;
+      }
+    });
+};
 
-const getSubscriptionDetails = options => {
+const getSubscriptionDetails = (options) => {
   return window
     .fetch(`http://localhost:4000/subscription-details`, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.status === 200) {
         return res.json();
       } else {
         return null;
       }
     })
-    .then(data => {
+    .then((data) => {
       if (!data || data.error) {
         console.log("API error:", { data });
         throw Error("API Error");
@@ -76,22 +73,22 @@ const getSubscriptionDetails = options => {
     });
 };
 
-const getPublicStripeKey = options => {
+const getPublicStripeKey = (options) => {
   return window
     .fetch(`http://localhost:4000/public-key`, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json"
-      }
+        "Content-Type": "application/json",
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.status === 200) {
         return res.json();
       } else {
         return null;
       }
     })
-    .then(data => {
+    .then((data) => {
       if (!data || data.error) {
         console.log("API error:", { data });
         throw Error("API Error");
@@ -102,7 +99,7 @@ const getPublicStripeKey = options => {
 };
 
 const api = {
-  createPaymentIntent:createPaymentIntent,
+  getProductDetailById: getProductDetailById,
   getPublicStripeKey: getPublicStripeKey,
   getProductDetails: getProductDetails,
   getSubscriptionDetails: getSubscriptionDetails,

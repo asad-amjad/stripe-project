@@ -25,7 +25,6 @@ app.get("/subscription-details", (req, res) => {
   res.send(data);
 });
 
-// Step 1: Create a Customer
 app.post("/create-customer", async (req, res) => {
   try {
     const customer = await stripe.customers.create({
@@ -41,88 +40,137 @@ app.post("/create-customer", async (req, res) => {
   }
 });
 
+// New endpoint for getting product details from Stripe
+app.get("/get-product-details/:productId", async (req, res) => {
+  const productId = req.params.productId;
+  try {
+    const product = await stripe.products.retrieve(productId);
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    if (product) {
+      const price = await stripe.prices.retrieve(product.default_price);
+      product.priceDetails = price; //Send price details
+
+      const coupons = await stripe.coupons.list({
+        limit: 3,
+      });
+      product.allCop = coupons; //Send price details
+    }
+
+    res.json({ product });
+  } catch (error) {
+    console.error("Error retrieving product details:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Step 1: Create a Customer
+app.post("/payment-method-list", async (req, res) => {
+  const { customerId } = req.body;
+  try {
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: customerId,
+      // type: 'card', // You can specify the type of payment methods you want to retrieve
+    });
+    // res.json({ paymentMethods });
+    res.json({ paymentMethods: paymentMethods.data });
+  } catch (error) {
+    console.error("Error creating customer:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+app.post("/attach-payment-method", async (req, res) => {
+  const { customerId, paymentMethodId } = req.body;
+  try {
+    console.log(customerId, paymentMethodId);
+    // Attach the payment method to the customer
+    // await stripe.paymentMethods.attach(paymentMethodId, {
+    //   customer: customerId,
+    // });
+
+    const bb = await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+    console.log(bb, "s");
+    // Set the payment method as the default for the customer
+    const dd = await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+
+    console.log("dd", dd);
+    // res.json({
+    //   success: true,
+    //   message: "Payment method attached successfully",
+    // });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post("/create-payment-intent", async (req, res) => {
   const body = req.body;
   const productDetails = getProductDetails();
   const customerId = req.body.customerId;
 
   const options = {
-    // ...body,
     amount: productDetails.amount,
     currency: productDetails.currency,
     customer: customerId,
-    automatic_payment_methods: {
-      enabled: true,
-    },
+    // setup_future_usage: 'off_session',
+
+    // save_payment_method:true,
+    // off_session: true,
+    // confirm: true,
+    // automatic_payment_methods: {
+    //   enabled: true,
+    // },
   };
+
   try {
     const paymentIntent = await stripe.paymentIntents.create(options);
-    // console.log(paymentIntent)
-    // res.json(paymentIntent);
+
+    // const paymentMethodId = paymentIntent.payment_method;
+    // if (paymentMethodId) {
+    //   await stripe.paymentMethods.attach(paymentMethodId, {
+    //     customer: customerId,
+    //   });
+    // }
+
+    // // Set the payment method as the default for the customer
+    // await stripe.customers.update(customerId, {
+    //   invoice_settings: {
+    //     default_payment_method: paymentMethodId,
+    //   },
+    // });
+
     res.json({ clientSec: paymentIntent.client_secret });
   } catch (err) {
     return res.json(err);
   }
-});
 
-// app.post("/create-payment-intent", async (req, res) => {
-//   const body = req.body;
-//   const productDetails = getProductDetails();
-//   const customerId = req.body.customerId;
+  // try {
+  //   const paymentMethodId = paymentIntent.payment_method;
 
-//   const options = {
-//     ...body,
-//     amount: productDetails.amount,
-//     currency: productDetails.currency,
-//     customer: customerId,
-//   };
+  //   console.log(paymentIntent);
+  //   if (paymentMethodId) {
+  //     // Use the PaymentMethod ID for further actions if needed
+  //     // For example, you can attach it to the customer
+  //     const dd = await stripe.paymentMethods.attach(paymentMethodId, {
+  //       customer: customerId,
+  //     });
+  //     console.log(dd);
+  //   }
 
-//   try {
-//     const paymentIntent = await stripe.paymentIntents.create(options);
-//     console.log(paymentIntent)
-//     res.json(paymentIntent);
-//   } catch (err) {
-//     res.json(err);
-//   }
-// });
-
-// const transactionsDatabase = [];
-
-// Step 2: Purchase a Product
-app.post("/purchase-product", async (req, res) => {
-  try {
-    const customerId = req.body.customerId;
-    const productPriceInCents = 1000;
-    const quantity = 1;
-
-    // Create a PaymentIntent using the default payment method
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: productPriceInCents * quantity,
-      currency: "usd",
-      customer: customerId,
-      payment_method_types: ["card"],
-      //Othe Options
-      // automatic_payment_methods: {enabled: true},
-      // confirm:true
-    });
-
-    // TODO: Store the transaction in the database
-    res.json({ client_secret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error("Error creating PaymentIntent:", error);
-
-    // Check the type of error and handle it appropriately
-    if (error.type === "StripeCardError") {
-      // Handle card-related errors
-      return res.status(400).json({ error: error.message });
-    } else if (error.type === "StripeInvalidRequestError") {
-      // Handle invalid request errors
-      return res.status(400).json({ error: error.message });
-    } else {
-      // Handle other errors (e.g., server errors)
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  }
+  //   // res.json({  });
+  // } catch (err) {
+  //   // return res.json(err);
+  // }
 });
 
 // Step 2: Create a Subscription with the attached PaymentMethod

@@ -11,19 +11,11 @@ function Subscription() {
   const [modal, setModal] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
   const [details, setDetails] = useState({});
+  const [clientSecret, setClientSecret] = useState("");
 
   const toggle = () => setModal(!modal);
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
 
-  const options = {
-    mode: "payment",
-    currency: details?.currency,
-    amount: details?.amount,
-    // Fully customizable with appearance API.
-    appearance: {
-      /*...*/
-    },
-  };
 
   useEffect(() => {
     if (!localStorage.getItem("customerId")) {
@@ -34,12 +26,29 @@ function Subscription() {
       });
     }
   }, []);
+  
+  const customerId = localStorage.getItem("customerId");
+
+  useEffect(() => {
+    if (modal) {
+      fetch("http://localhost:4000/create-payment-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ customerId: customerId }),
+      }).then(async (r) => {
+        const { clientSec } = await r.json();
+        setClientSecret(clientSec);
+      });
+    }
+  }, [customerId, modal]);
 
   return (
     <div className="App">
       <LoginModal loginModal={loginModal} setLoginModal={setLoginModal} />
       <div className="w-100 p-1">
-      <p>Single Payment</p>
+        <p>Single Payment</p>
         Product details Here Price:
         <p>{details?.name}</p>
         <p>${details?.amount / 100}</p>
@@ -47,8 +56,8 @@ function Subscription() {
           Buy Product
         </Button>
       </div>
-      {details.amount && (
-        <Elements stripe={stripePromise} options={options}>
+      {clientSecret && stripePromise && (
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
           <SubscriptionForm open={modal} toggle={toggle} />
         </Elements>
       )}
