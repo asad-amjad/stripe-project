@@ -21,12 +21,56 @@ app.get("/product-details", (req, res) => {
 });
 
 //Product Id for subscription Plans
-app.get("/home-plans", (req, res) => {
+app.get("/home-plans", async (req, res) => {
   res.send({
-    plan_a: process.env.STRIPE_HOME_PLAN_A,
-    plan_b: process.env.STRIPE_HOME_PLAN_B,
-    plan_c: process.env.STRIPE_HOME_PLAN_C,
+    plans: {
+      plan_a: process.env.STRIPE_HOME_PLAN_A,
+      plan_b: process.env.STRIPE_HOME_PLAN_B,
+      plan_c: process.env.STRIPE_HOME_PLAN_C,
+    },
   });
+});
+
+app.get("/my-active-subscriptions/:customerId", async (req, res) => {
+  const customerId = req.params.customerId;
+  try {
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "active",
+    });
+
+    const activeSubscriptions = subscriptions.data;
+
+    const productIds = activeSubscriptions.flatMap((subscription) => {
+      return subscription.items.data.map((item) => {
+        return item.price.product;
+      });
+    });
+    res.json({ activeSubscriptions, productIds });
+  } catch (error) {
+    console.error("Error retrieving active subscriptions:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/cancel-subscription", async (req, res) => {
+  const { subscriptionId } = req.body;
+  try {
+    const deletedSubscription = await stripe.subscriptions.del(subscriptionId);
+
+    res.json({
+      success: true,
+      message: `Subscription ${subscriptionId} cancelled successfully`,
+    });
+  } catch (error) {
+    console.error(
+      `Error cancelling subscription ${subscriptionId}:`,
+      error.message
+    );
+    res
+      .status(500)
+      .json({ error: `Failed to cancel subscription ${subscriptionId}` });
+  }
 });
 
 app.post("/create-customer", async (req, res) => {
@@ -170,6 +214,33 @@ app.post("/validate-coupon", async (req, res) => {
   }
 });
 
+app.get("/get-default-payment-method/:customerId", async (req, res) => {
+  const { customerId } = req.params;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.invoice_settings.default_payment_method) {
+      const paymentMethod = await stripe.paymentMethods.retrieve(
+        customer.invoice_settings.default_payment_method
+      );
+      res.json({
+        success: true,
+        defaultPaymentMethod: paymentMethod,
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "Customer has no default payment method.",
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
+
 // Step 2: Create a Subscription with the attached PaymentMethod
 app.post("/create-subscription", async (req, res) => {
   const customerId = req.body.customerId;
@@ -177,18 +248,21 @@ app.post("/create-subscription", async (req, res) => {
   const paymentMethodId = req.body.paymentMethodId;
   const subscriptionDescription = req.body.subscriptionDescription;
   const coupon = req.body.coupon;
+  const isDefaultPayment = req.body.isDefaultPayment;
+
   try {
-    await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customerId,
-    });
+    if (!isDefaultPayment) {
+      await stripe.paymentMethods.attach(paymentMethodId, {
+        customer: customerId,
+      });
 
-    // Set the payment method as the default for the customer
-    await stripe.customers.update(customerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
-
+      // Set the payment method as the default for the customer
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+    }
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [

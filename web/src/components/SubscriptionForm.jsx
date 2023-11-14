@@ -8,7 +8,13 @@ import {
   CardElement,
 } from "@stripe/react-stripe-js";
 
-const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
+const SubscriptionForm = ({
+  open,
+  toggle,
+  selectedPlan,
+  defaultPaymentMethod,
+  fetchMyActiveSubscriptions,
+}) => {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
@@ -17,10 +23,10 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
   const [price, setPrice] = useState(0);
   const [validCoupon, setValidCoupon] = useState({});
   const [showCoupen, setShowCoupen] = useState(false);
+  const [chooseOtherPayment, setChooseOtherPayment] = useState(false);
 
   const customerId = localStorage.getItem("customerId"); // Get the customer ID
   const customerEmail = localStorage.getItem("customerEmail"); // Get the customer ID
-  // console.log(selectedPlan?.planDetails?.default_price);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,6 +56,7 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
           priceId: selectedPlan?.planDetails?.default_price,
           subscriptionDescription: selectedPlan?.planDetails?.name,
           coupon: validCoupon?.couponId,
+          isDefaultPayment: false,
           // geZbHDVJ
         }),
       });
@@ -57,6 +64,7 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
         const { subscriptionId } = await result.json();
         if (subscriptionId) {
           setLoading(false);
+          fetchMyActiveSubscriptions();
           toggle();
         }
         // Handle success
@@ -65,6 +73,39 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
         setError(response.error);
         setLoading(false);
       }
+    }
+  };
+
+  const handleSubmitWithDefaultPayment = async (e) => {
+    setLoading(true);
+
+    const result = await fetch("http://localhost:4000/create-subscription", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerId: customerId,
+        paymentMethodId: defaultPaymentMethod.id,
+        priceId: selectedPlan?.planDetails?.default_price,
+        subscriptionDescription: selectedPlan?.planDetails?.name,
+        coupon: validCoupon?.couponId,
+        isDefaultPayment: true,
+      }),
+    });
+
+    if (result.ok) {
+      const { subscriptionId } = await result.json();
+      if (subscriptionId) {
+        setLoading(false);
+        fetchMyActiveSubscriptions();
+        toggle();
+      }
+      // Handle success
+    } else {
+      const response = await result.json();
+      setError(response.error);
+      setLoading(false);
     }
   };
 
@@ -83,7 +124,7 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
         if (response.valid) {
           setPrice((1 - response.couponDetails.percentageOff / 100) * price);
           setValidCoupon(response.couponDetails);
-          setShowCoupen(false)
+          setShowCoupen(false);
           setError("");
         }
         if (!response.valid) {
@@ -94,40 +135,48 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
   };
 
   useEffect(() => {
-    // if (selectedPlan?.priceDetail?.unit_amount) {
-    // console.log(selectedPlan)
     setPrice(selectedPlan?.priceDetail?.unit_amount);
-    // }
   }, [selectedPlan]);
 
-  // console.log(selectedPlan.priceDetail?.unit_amount);
   return (
     <Modal isOpen={open} toggle={toggle}>
       <ModalHeader toggle={toggle}>
         {selectedPlan?.planDetails?.name}
-        {/* {   selectedPlan?.planDetails?.name} */}
       </ModalHeader>
       <ModalBody>
         {" "}
-        
-        <h4 className="mb-4">{Object.keys(validCoupon).length > 0 ?'Updated':'Plan'} Price: ${price / 100}</h4>
-        {Object.keys(validCoupon).length > 0 &&
-          <p>Discount: {validCoupon.percentageOff}%</p>}
+        <h4 className="mb-4">
+          {Object.keys(validCoupon).length > 0 ? "Updated" : "Plan"} Price: $
+          {price / 100}
+        </h4>
+        {Object.keys(validCoupon).length > 0 && (
+          <p>Discount: {validCoupon.percentageOff}%</p>
+        )}
         {showCoupen && (
           <div className="mt-4 mb-4 d-flex flex-column gap-4">
-            <div>
-              <label htmlFor="coupon">Coupon Code:</label>
+            <div className="d-flex justify-content-between align-items-center">
               <div>
-                <input
-                  type="text"
-                  id="coupon"
-                  value={coupon}
-                  onChange={(e) => setCoupon(e.target.value)}
-                />
+                <label htmlFor="coupon">Coupon Code:</label>
+                <div>
+                  <input
+                    type="text"
+                    id="coupon"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div
+                role="button"
+                className="text-danger"
+                onClick={() => { setShowCoupen(false); setError(""); }}
+              >
+                X
               </div>
             </div>
             <div>
-              {coupon.length > 0 &&
+              {coupon.length > 0 && (
                 <Button
                   color="primary"
                   type="submit"
@@ -137,31 +186,65 @@ const SubscriptionForm = ({ open, toggle, selectedPlan }) => {
                 >
                   Apply Coupon
                 </Button>
-              }
+              )}
             </div>
           </div>
         )}
         {!showCoupen && (
           <>
-            {Object.keys(validCoupon).length < 1 &&
-              <p className="text-info mt-4 mb-4" style={{ cursor: 'pointer' }} onClick={() => setShowCoupen(true)}>
+            {Object.keys(validCoupon).length < 1 && (
+              <p
+                className="text-info mt-4 mb-4"
+                style={{ cursor: "pointer" }}
+                onClick={() => setShowCoupen(true)}
+              >
                 I have a coupon
               </p>
+            )}
+            {
+              (chooseOtherPayment || !defaultPaymentMethod) && (
+                // <div className="d-flex justify-content-between">
+                <form onSubmit={handleSubmit}>
+                  <CardElement />
+                  <Button
+                    color="primary"
+                    type="submit"
+                    className="mt-5"
+                  // disabled={!stripe || !elements || processing}
+                  >
+                    {loading ? "Processing" : "Subscribe Now"}
+                  </Button>
+                </form>
+              )
+              // </div>
             }
-            <form onSubmit={handleSubmit}>
-              <CardElement />
-              <Button
-                color="primary"
-                type="submit"
-                className="mt-5"
-              // disabled={!stripe || !elements || processing}
-              >
-                {loading ? "Processing" : "Subscribe Now"}
-              </Button>
-            </form>
           </>
         )}
         {error && <div className="text-danger">{error}</div>}
+        {!showCoupen && defaultPaymentMethod && (
+          <div className="d-flex justify-content-between">
+            <Button
+              color="primary"
+              type="submit"
+              className="mt-5"
+              onClick={handleSubmitWithDefaultPayment}
+            // disabled={!stripe || !elements || processing}
+            >
+              {loading ? "Processing" : "Pay with My Default Payment"}
+            </Button>
+            {!chooseOtherPayment && (
+              <Button
+                color="primary"
+                type="submit"
+                className="mt-5 btn btn-dark"
+                onClick={() => setChooseOtherPayment(true)}
+              // disabled={!stripe || !elements || processing}
+              >
+                Choose Other
+              </Button>
+            )}
+          </div>
+        )}
       </ModalBody>
       <ModalFooter>
         <Button color="secondary" onClick={toggle}>
