@@ -4,7 +4,7 @@ import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import axios from 'axios';
 import { Button } from 'reactstrap';
 
-const YourComponent = () => {
+const AddNewMethod = ({ fetchMyPaymentMethods }) => {
     const stripe = useStripe();
     const elements = useElements();
 
@@ -36,6 +36,7 @@ const YourComponent = () => {
                 );
 
                 console.log(response.data);
+                fetchMyPaymentMethods()
                 // Handle success, e.g., show a success message to the user
             } catch (error) {
                 console.error(error.response.data);
@@ -56,4 +57,4 @@ const YourComponent = () => {
     );
 };
 
-export default YourComponent;
+export default AddNewMethod;

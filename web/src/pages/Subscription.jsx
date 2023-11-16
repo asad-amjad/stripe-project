@@ -43,17 +43,16 @@ function Subscription() {
   };
 
   const fetchMyDefaultPaymentMethod = () => {
-    fetch(`http://localhost:4000/get-default-payment-method/${customerId}`, {
-      method: "GET",
+    fetch("http://localhost:4000/payment-method-list", {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({ customerId: customerId }),
     }).then(async (r) => {
-      const { defaultPaymentMethod, success, customer } = await r.json();
-      if (success) {
-        console.log(defaultPaymentMethod)
-        setDefaultPaymentMethod(defaultPaymentMethod);
-      }
+      const { defaultPaymentMethod } = await r.json();
+      // setPaymentMethodsList(paymentMethods);
+      setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
 

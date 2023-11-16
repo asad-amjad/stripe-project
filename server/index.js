@@ -89,14 +89,9 @@ app.post("/create-customer", async (req, res) => {
   }
 });
 
-app.post('/update-payment-method', async (req, res) => {
+app.post("/update-payment-method", async (req, res) => {
   try {
     const { customerId, newPaymentMethodId } = req.body;
-
-    // Assuming you have the customer ID stored in your database
-    // Retrieve the customer from your database
-    // const customer = await stripe.customers.retrieve(customerId);
-
     // Update the default payment method for the customer
     await stripe.customers.update(customerId, {
       invoice_settings: {
@@ -104,13 +99,36 @@ app.post('/update-payment-method', async (req, res) => {
       },
     });
 
-    res.status(200).json({ success: true, message: 'Default payment method updated successfully' });
+    res.status(200).json({
+      success: true,
+      message: "Default payment method updated successfully",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, error: 'Internal Server Error' });
+    res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 });
 
+// app.post('/update-card', async (req, res) => {
+//   const { customerId, paymentMethodId, cardNumber, expiryDate, cvc } = req.body;
+
+//   try {
+//       // Update the payment method details in Stripe
+//       await stripe.paymentMethods.update(paymentMethodId, {
+//           card: {
+//               number: cardNumber,
+//               exp_month: parseInt(expiryDate.split('/')[0]),
+//               exp_year: parseInt(expiryDate.split('/')[1]),
+//               cvc: cvc,
+//           },
+//       });
+
+//       res.json({ success: true, message: 'Card updated successfully' });
+//   } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ success: false, message: 'Error updating card' });
+//   }
+// });
 
 // Get product details from Stripe
 app.get("/get-product-details/:productId", async (req, res) => {
@@ -137,16 +155,31 @@ app.get("/get-product-details/:productId", async (req, res) => {
 // Customer payment method list
 app.post("/payment-method-list", async (req, res) => {
   const { customerId } = req.body;
+
   try {
     const paymentMethods = await stripe.paymentMethods.list({
       customer: customerId,
-      // type: 'card',
     });
-    // res.json({ paymentMethods });
-    res.json({ paymentMethods: paymentMethods.data });
+    const customer = await stripe.customers.retrieve(customerId);
+    let defaultPaymentMethod;
+
+    // Check if the customer has a default payment method
+    if (customer.invoice_settings.default_payment_method) {
+      // Retrieve the default payment method details
+      defaultPaymentMethod = await stripe.paymentMethods.retrieve(
+        customer.invoice_settings.default_payment_method
+      );
+    }
+
+    res.json({
+      paymentMethods: paymentMethods.data,
+      defaultPaymentMethod,
+    });
   } catch (error) {
-    console.error("Error creating customer:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error retrieving payment methods:", error);
+
+    // Send a more informative error response
+    res.status(500).json({ error: "Failed to retrieve payment methods" });
   }
 });
 
@@ -256,35 +289,6 @@ app.post("/validate-coupon", async (req, res) => {
     }
   } catch (error) {
     res.json({ valid: false, error: error.message });
-  }
-});
-
-app.get("/get-default-payment-method/:customerId", async (req, res) => {
-  const { customerId } = req.params;
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-
-    if (customer.invoice_settings.default_payment_method) {
-      const paymentMethod = await stripe.paymentMethods.retrieve(
-        customer.invoice_settings.default_payment_method
-      );
-      res.json({
-        success: true,
-        defaultPaymentMethod: paymentMethod,
-        customer: customer,
-      });
-    } else {
-      res.json({
-        success: false,
-        message: "Customer has no default payment method.",
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
   }
 });
 

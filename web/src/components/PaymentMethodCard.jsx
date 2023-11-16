@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardBody,
@@ -9,23 +9,34 @@ import {
   Button,
 } from "reactstrap";
 
-const PaymentMethodCard = ({ paymentMethod, defaultPaymentMethod }) => {
+const PaymentMethodCard = ({ paymentMethod, defaultPaymentMethod, fetchMyPaymentMethods }) => {
   const customerId = localStorage.getItem("customerId");
+  const [processing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
 
-  const handleNewPaymentMethod = () => {
-    console.log('sda')
-    // const
-    // fetch("http://localhost:4000/update-payment-method", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({ customerId: customerId }),
-    // }).then(async (r) => {
-    //   const { paymentMethods } = await r.json();
-    //   // setPaymentMethodsList(paymentMethods);
-    // });
+
+  const handleNewPaymentMethod = (defaultMethodId) => {
+    setIsProcessing(true)
+    fetch("http://localhost:4000/update-payment-method", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ customerId, newPaymentMethodId: defaultMethodId }),
+    }).then(async (r) => {
+      const { success, message } = await r.json();
+      setIsProcessing(false)
+      console.log(message)
+      if (!success) {
+        setErrorMessage(message)
+      }
+
+      if (success) {
+        fetchMyPaymentMethods()
+      }
+    });
   };
+
   return (
     <Card
       className="shadow-lg p-4 m-3"
@@ -68,9 +79,16 @@ const PaymentMethodCard = ({ paymentMethod, defaultPaymentMethod }) => {
         </ListGroupItem>
 
         {defaultPaymentMethod?.id !== paymentMethod?.id && (
-          <Button onClick={() => handleNewPaymentMethod()}>
-            Make it defalut
-          </Button>
+          <div className="d-flex justify-content-between mt-5">
+
+            <Button onClick={() => handleNewPaymentMethod(paymentMethod?.id)}>
+              {processing ? 'processing...' : 'Make it defalut'}
+            </Button>
+
+            {/* <Button>
+              Edit
+            </Button> */}
+          </div>
         )}
       </ListGroup>
     </Card>
