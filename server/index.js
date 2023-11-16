@@ -89,6 +89,29 @@ app.post("/create-customer", async (req, res) => {
   }
 });
 
+app.post('/update-payment-method', async (req, res) => {
+  try {
+    const { customerId, newPaymentMethodId } = req.body;
+
+    // Assuming you have the customer ID stored in your database
+    // Retrieve the customer from your database
+    // const customer = await stripe.customers.retrieve(customerId);
+
+    // Update the default payment method for the customer
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: newPaymentMethodId,
+      },
+    });
+
+    res.status(200).json({ success: true, message: 'Default payment method updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
+
 // Get product details from Stripe
 app.get("/get-product-details/:productId", async (req, res) => {
   const productId = req.params.productId;

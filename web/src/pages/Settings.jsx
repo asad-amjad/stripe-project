@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { Button } from "reactstrap";
+import { Button, Card, CardBody, CardTitle } from "reactstrap";
 
 import LoginModal from "../components/LoginModal";
 import api from "../api";
@@ -37,7 +37,6 @@ function Settings() {
         setPaymentMethodsList(paymentMethods);
       });
 
-
       fetch(`http://localhost:4000/get-default-payment-method/${customerId}`, {
         method: "GET",
         headers: {
@@ -67,24 +66,38 @@ function Settings() {
   //     });
   //   }
   // }, [customerId, modal]);
-// console.log(defaultPaymentMethod)
+  // console.log(defaultPaymentMethod)
 
   return (
     <div className="App">
       <LoginModal loginModal={loginModal} setLoginModal={setLoginModal} />
       <h1>Settings</h1>
+
+      <Card className="shadow-lg p-4 m-3 w-25">
+        <CardBody className="justify-content-between w-100">
+        <CardTitle tag="h5" className="mb-5">
+          Add New Card
+        </CardTitle>
+          <Elements stripe={stripePromise}>
+            <YourComponent />
+          </Elements>
+        </CardBody>
+      </Card>
+
       <div className="d-flex justify-content-center">
         {paymentMethodsList.length > 0
           ? paymentMethodsList.map((k, i) => {
-            return (
-              <PaymentMethodCard key={i} paymentMethod={k} defaultPaymentMethod={defaultPaymentMethod}/>
-            )
-          })
+              return (
+                <PaymentMethodCard
+                  key={i}
+                  paymentMethod={k}
+                  defaultPaymentMethod={defaultPaymentMethod}
+                />
+              );
+            })
           : "No Payment method found"}
       </div>
-      <Elements stripe={stripePromise}>
-      <YourComponent />
-      </Elements>
+
       {/* <div className="w-100 p-1">
         <Button color="danger" onClick={toggle}>
           Attach Method

@@ -47,8 +47,7 @@ const YourComponent = () => {
     };
 
     return (
-        <div className='w-25'>
-
+        <div className='w-100'>
             <form onSubmit={handleSubmit}>
                 <CardElement />
                 <Button type="submit" className='mt-4'>Submit</Button>
