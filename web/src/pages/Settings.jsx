@@ -7,6 +7,7 @@ import LoginModal from "../components/LoginModal";
 import api from "../api";
 import HandlePaymentMethod from "../components/HandlePaymentMethod";
 import PaymentMethodCard from "../components/PaymentMethodCard";
+import YourComponent from "./CardElement";
 
 function Settings() {
   const [modal, setModal] = useState(false);
@@ -14,6 +15,7 @@ function Settings() {
   // const [details, setDetails] = useState({});
   const [clientSecret, setClientSecret] = useState("");
   const [paymentMethodsList, setPaymentMethodsList] = useState("");
+  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(null);
 
   const toggle = () => setModal(!modal);
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
@@ -34,6 +36,20 @@ function Settings() {
         const { paymentMethods } = await r.json();
         setPaymentMethodsList(paymentMethods);
       });
+
+
+      fetch(`http://localhost:4000/get-default-payment-method/${customerId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }).then(async (r) => {
+        const { defaultPaymentMethod, success, customer } = await r.json();
+        if (success) {
+          // console.log(defaultPaymentMethod)
+          setDefaultPaymentMethod(defaultPaymentMethod);
+        }
+      });
     }
   }, [customerId]);
 
@@ -51,7 +67,7 @@ function Settings() {
   //     });
   //   }
   // }, [customerId, modal]);
-
+// console.log(defaultPaymentMethod)
 
   return (
     <div className="App">
@@ -59,13 +75,16 @@ function Settings() {
       <h1>Settings</h1>
       <div className="d-flex justify-content-center">
         {paymentMethodsList.length > 0
-          ? paymentMethodsList.map((k) => {
+          ? paymentMethodsList.map((k, i) => {
             return (
-              <PaymentMethodCard key={k} paymentMethod={k} />
+              <PaymentMethodCard key={i} paymentMethod={k} defaultPaymentMethod={defaultPaymentMethod}/>
             )
           })
           : "No Payment method found"}
       </div>
+      <Elements stripe={stripePromise}>
+      <YourComponent />
+      </Elements>
       {/* <div className="w-100 p-1">
         <Button color="danger" onClick={toggle}>
           Attach Method

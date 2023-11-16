@@ -127,6 +127,28 @@ app.post("/payment-method-list", async (req, res) => {
   }
 });
 
+app.post("/add-new-payment-method", async (req, res) => {
+  try {
+    const { token, customerId } = req.body;
+    const paymentMethod = await stripe.paymentMethods.create({
+      type: "card",
+      card: {
+        token: token.id,
+      },
+    });
+    await stripe.paymentMethods.attach(paymentMethod.id, {
+      customer: customerId,
+    });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Payment method added successfully" });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
 // Pending: Attch payment method to customer
 app.post("/attach-payment-method", async (req, res) => {
   const { customerId, paymentMethodId } = req.body;
@@ -218,6 +240,7 @@ app.get("/get-default-payment-method/:customerId", async (req, res) => {
   const { customerId } = req.params;
   try {
     const customer = await stripe.customers.retrieve(customerId);
+
     if (customer.invoice_settings.default_payment_method) {
       const paymentMethod = await stripe.paymentMethods.retrieve(
         customer.invoice_settings.default_payment_method
@@ -225,6 +248,7 @@ app.get("/get-default-payment-method/:customerId", async (req, res) => {
       res.json({
         success: true,
         defaultPaymentMethod: paymentMethod,
+        customer: customer,
       });
     } else {
       res.json({

@@ -49,8 +49,9 @@ function Subscription() {
         "Content-Type": "application/json",
       },
     }).then(async (r) => {
-      const { defaultPaymentMethod, success } = await r.json();
+      const { defaultPaymentMethod, success, customer } = await r.json();
       if (success) {
+        console.log(defaultPaymentMethod)
         setDefaultPaymentMethod(defaultPaymentMethod);
       }
     });
@@ -100,6 +101,7 @@ function Subscription() {
             </div>
           </>
         )}
+
       </div>
       {Object.keys(selectedPlan).length > 0 && (
         <Elements stripe={stripePromise}>

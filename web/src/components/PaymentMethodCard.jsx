@@ -1,10 +1,13 @@
 import React from 'react';
 import { Card, CardBody, CardTitle, CardSubtitle, ListGroup, ListGroupItem } from 'reactstrap';
 
-const PaymentMethodCard = ({ paymentMethod }) => {
+const PaymentMethodCard = ({ paymentMethod, defaultPaymentMethod }) => {
     return (
         <Card className="shadow-lg p-4 m-3" style={{
-            width: "30rem"
+            width: "30rem",
+            borderColor: defaultPaymentMethod?.id ==paymentMethod?.id && "green",
+            borderWidth: defaultPaymentMethod?.id ==paymentMethod?.id && "3px",
+            // defaultPaymentMethod?.id ==paymentMethod?.id
         }} >
             <CardBody className=''>
                 <CardTitle tag="h5" className="mb-3">Payment Method</CardTitle>
