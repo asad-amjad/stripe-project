@@ -35,7 +35,7 @@ function Subscription() {
   };
 
   const fetchMyActiveSubscriptions = () => {
-    fetch(`http://localhost:4000/my-active-subscriptions/${customerId}`, {
+    fetch(`http://localhost:4000/stripe/active-subscriptions/${customerId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +47,7 @@ function Subscription() {
   };
 
   const fetchMyDefaultPaymentMethod = () => {
-    fetch("http://localhost:4000/payment-method-list", {
+    fetch("http://localhost:4000/stripe/payment-method-list", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -84,7 +84,7 @@ function Subscription() {
       activeSubscriptions[0]?.items.data[0]?.id;
     const newPriceId = newPriceDetail.id;
 
-    fetch(`http://localhost:4000/updateSubscription/${subscriptionId}`, {
+    fetch(`http://localhost:4000/stripe/update-subscription/${subscriptionId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -99,7 +99,8 @@ function Subscription() {
       fetchMyActiveSubscriptions();
     });
   };
-
+  
+// TODO:
   const calculateInvoice = async ({ newPriceDetail }) => {
     const subscriptionId = activeSubscriptions[0].id;
     const subItemId =

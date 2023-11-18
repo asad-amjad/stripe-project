@@ -17,7 +17,7 @@ const PaymentMethodCard = ({ paymentMethod, defaultPaymentMethod, fetchMyPayment
 
   const handleNewPaymentMethod = (defaultMethodId) => {
     setIsProcessing(true)
-    fetch("http://localhost:4000/update-payment-method", {
+    fetch("http://localhost:4000/stripe/set-default-method", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

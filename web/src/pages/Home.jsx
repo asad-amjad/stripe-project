@@ -33,7 +33,7 @@ function Home() {
 
   useEffect(() => {
     if (modal) {
-      fetch("http://localhost:4000/create-payment-intent", {
+      fetch("http://localhost:4000/stripe/create-payment-intent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

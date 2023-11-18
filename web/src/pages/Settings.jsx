@@ -16,7 +16,7 @@ function Settings() {
   const customerId = localStorage.getItem("customerId");
 
   const fetchMyPaymentMethods = () => {
-    fetch("http://localhost:4000/payment-method-list", {
+    fetch("http://localhost:4000/stripe/payment-method-list", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

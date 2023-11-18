@@ -9,4 +9,4 @@ const staticData = [
   // Add more data here
 ];
 
-module.exports = { getProductDetails, getSubscriptionDetails };
+module.exports = { getProductDetails };

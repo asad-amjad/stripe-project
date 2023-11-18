@@ -45,7 +45,7 @@ const SubscriptionForm = ({
       setLoading(false);
     } else {
       // Send paymentMethod.id and customerId to your backend to create a subscription
-      const result = await fetch("http://localhost:4000/create-subscription", {
+      const result = await fetch("http://localhost:4000/stripe/create-subscription", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,7 +79,7 @@ const SubscriptionForm = ({
   const handleSubmitWithDefaultPayment = async (e) => {
     setLoading(true);
 
-    const result = await fetch("http://localhost:4000/create-subscription", {
+    const result = await fetch("http://localhost:4000/stripe/create-subscription", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -110,7 +110,7 @@ const SubscriptionForm = ({
   };
 
   const handleCoupen = async () => {
-    await fetch("http://localhost:4000/validate-coupon", {
+    await fetch("http://localhost:4000/stripe/validate-coupon", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

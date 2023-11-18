@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter, Input } from "reactstrap";
 import axios from "axios";
 
+// Create customer on stripe Modal
 function LoginModal({ loginModal, setLoginModal }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -9,7 +10,7 @@ function LoginModal({ loginModal, setLoginModal }) {
   const handleCreateCustomer = async () => {
     try {
       const response = await axios.post(
-        "http://localhost:4000/create-customer",
+        "http://localhost:4000/stripe/register-customer",
         { email, name }
       );
       if (response) {

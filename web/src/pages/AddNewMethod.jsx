@@ -28,7 +28,7 @@ const AddNewMethod = ({ fetchMyPaymentMethods }) => {
 
             try {
                 const response = await axios.post(
-                    "http://localhost:4000/add-new-payment-method",
+                    "http://localhost:4000/stripe/add-new-payment-method",
                     {
                         customerId: customerId,
                         token: token,

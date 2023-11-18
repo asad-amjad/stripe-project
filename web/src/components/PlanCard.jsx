@@ -31,11 +31,11 @@ const PlanCard = ({
     }
     return null;
   }
-  // console.log(activeSubscriptions);
+  
   useEffect(() => {
     if (planId) {
       setLoading(true);
-      fetch(`http://localhost:4000/get-product-details/${planId}`, {
+      fetch(`http://localhost:4000/stripe/product/${planId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -57,7 +57,7 @@ const PlanCard = ({
     setProcessing(true);
     try {
       const response = await fetch(
-        `http://localhost:4000/cancel-subscription`,
+        `http://localhost:4000/stripe/cancel-subscription`,
         {
           method: "POST",
           headers: {
