@@ -6,17 +6,21 @@ import SubscriptionForm from "../components/SubscriptionForm";
 import LoginModal from "../components/LoginModal";
 import api from "../api";
 import PlanCard from "../components/PlanCard";
+// import InvoiceDetails from "../components/InvoiceDetails";
 
 function Subscription() {
   const [modal, setModal] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState({});
   const [subscriptionPlans, setSubscriptionPlans] = useState({});
-  const [activeSubscriptions, setActiveSubscriptions] = useState({});
+  const [activeSubscriptionsDetails, setActiveSubscriptionsDetails] = useState({});
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(null);
+  const [invoice, setInvoice] = useState(null);
 
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
   const customerId = localStorage.getItem("customerId");
+
+  const { activeSubscriptions, productIds } = activeSubscriptionsDetails || {}
 
   const fetchPlanDetails = () => {
     fetch(`http://localhost:4000/home-plans`, {
@@ -38,7 +42,7 @@ function Subscription() {
       },
     }).then(async (r) => {
       const { activeSubscriptions, productIds } = await r.json();
-      setActiveSubscriptions({ activeSubscriptions, productIds });
+      setActiveSubscriptionsDetails({ activeSubscriptions, productIds });
     });
   };
 
@@ -51,7 +55,6 @@ function Subscription() {
       body: JSON.stringify({ customerId: customerId }),
     }).then(async (r) => {
       const { defaultPaymentMethod } = await r.json();
-      // setPaymentMethodsList(paymentMethods);
       setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
@@ -74,7 +77,56 @@ function Subscription() {
       fetchMyDefaultPaymentMethod();
     }
   }, [localStorage.getItem("customerId")]);
-  // console.log(activeSubscriptions);
+
+  const updatePlan = ({ newPriceDetail }) => {
+    const subscriptionId = activeSubscriptions[0].id;
+    const subItemId =
+      activeSubscriptions[0]?.items.data[0]?.id;
+    const newPriceId = newPriceDetail.id;
+
+    fetch(`http://localhost:4000/updateSubscription/${subscriptionId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        subscriptionId: subscriptionId,
+        subItemId: subItemId,
+        newPriceId: newPriceId,
+      }),
+    }).then(async (r) => {
+      const rs = await r.json();
+      fetchMyActiveSubscriptions();
+    });
+  };
+
+  const calculateInvoice = async ({ newPriceDetail }) => {
+    const subscriptionId = activeSubscriptions[0].id;
+    const subItemId =
+      activeSubscriptions[0]?.items.data[0]?.id;
+    const newPriceId = newPriceDetail.id;
+
+    try {
+      const response = await fetch("http://localhost:4000/calculateInvoice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subscriptionId: subscriptionId,
+          subItemId: subItemId,
+          newPriceId: newPriceId,
+          customerId: customerId
+        }),
+      });
+
+      const data = await response.json();
+      setInvoice(data.invoice);
+    } catch (error) {
+      console.error("Error calculating invoice:", error);
+    }
+  };
+
   return (
     <div className="App">
       <LoginModal loginModal={loginModal} setLoginModal={setLoginModal} />
@@ -90,9 +142,11 @@ function Subscription() {
                       key={i}
                       planId={k}
                       handlePlan={handlePlan}
-                      activeSubscriptions={activeSubscriptions}
+                      activeSubscriptions={activeSubscriptionsDetails}
                       fetchMyActiveSubscriptions={fetchMyActiveSubscriptions}
-                      isActive={activeSubscriptions?.productIds?.includes(k)}
+                      isActive={activeSubscriptionsDetails?.productIds?.includes(k)}
+                      updatePlan={updatePlan}
+                      calculateInvoice={calculateInvoice}
                     />
                   );
                 })}
@@ -100,7 +154,6 @@ function Subscription() {
             </div>
           </>
         )}
-
       </div>
       {Object.keys(selectedPlan).length > 0 && (
         <Elements stripe={stripePromise}>
@@ -113,6 +166,8 @@ function Subscription() {
           />
         </Elements>
       )}
+
+      {/* <InvoiceDetails invoice={invoice} /> */}
     </div>
   );
 }

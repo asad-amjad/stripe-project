@@ -5,7 +5,7 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const { getProductDetails, getSubscriptionDetails } = require("./data");
+const { getProductDetails } = require("./data");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -13,11 +13,6 @@ app.use(cors());
 
 app.get("/public-key", (req, res) => {
   res.send({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
-});
-
-app.get("/product-details", (req, res) => {
-  let data = getProductDetails();
-  res.send(data);
 });
 
 //Product Id for subscription Plans
@@ -73,6 +68,122 @@ app.post("/cancel-subscription", async (req, res) => {
   }
 });
 
+app.post("/updateSubscription/:subscriptionId", async (req, res) => {
+  const subscriptionId = req.params.subscriptionId;
+  const { subItemId, newPriceId } = req.body;
+  try {
+    const updatedSubscription = await stripe.subscriptions.update(
+      subscriptionId,
+      {
+        items: [
+          {
+            id: subItemId,
+            deleted: true,
+          },
+          {
+            price: newPriceId,
+          },
+        ],
+      }
+    );
+
+    res.status(200).json({
+      message: "Subscription updated successfully",
+      data: updatedSubscription,
+    });
+  } catch (error) {
+    console.error("Error updating subscription:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// TODO:
+// app.post("/updateSubscription/:subscriptionId", async (req, res) => {
+//   const subscriptionId = req.params.subscriptionId;
+//   const { subItemId, newPriceId } = req.body;
+
+//   try {
+//     // Get the current subscription to calculate the remaining amount
+//     const currentSubscription = await stripe.subscriptions.retrieve(
+//       subscriptionId
+//     );
+
+//     // Check if currentSubscription.items is an array
+//     const itemsArray = Array.isArray(currentSubscription.items)
+//       ? currentSubscription.items
+//       : [];
+
+//     // Calculate the remaining amount by summing up the remaining item amounts
+//     const remainingAmount = itemsArray
+//       .filter((item) => item.id === subItemId)
+//       .reduce((total, item) => total + item.amount_remaining, 0);
+
+//     // Update the subscription with the new price and delete the old item
+//     const updatedSubscription = await stripe.subscriptions.update(
+//       subscriptionId,
+//       {
+//         items: [
+//           {
+//             id: subItemId,
+//             deleted: true,
+//           },
+//           {
+//             price: newPriceId,
+//           },
+//         ],
+//         proration_behavior: "always_invoice",
+//       }
+//     );
+
+//     // If there's a remaining amount, create a refund
+//     if (remainingAmount > 0) {
+//       const refund = await stripe.refunds.create({
+//         payment_intent: updatedSubscription.latest_invoice.payment_intent,
+//         amount: remainingAmount,
+//       });
+
+//       console.log("Refund created:", refund);
+//     }
+
+//     res
+//       .status(200)
+//       .json({
+//         message: "Subscription updated successfully",
+//         data: updatedSubscription,
+//       });
+//   } catch (error) {
+//     console.error("Error updating subscription:", error.message);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
+
+app.post("/calculateInvoice", async (req, res) => {
+  const { subscriptionId, subItemId, newPriceId, customerId } = req.body;
+  try {
+    const proration_date = Math.floor(Date.now() / 1000);
+
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+    const items = [
+      {
+        id: subscription.items.data[0].id,
+        price: newPriceId, // Switch to new price
+      },
+    ];
+
+    const invoice = await stripe.invoices.retrieveUpcoming({
+      customer: customerId,
+      subscription: subscriptionId,
+      subscription_items: items,
+      subscription_proration_date: proration_date,
+    });
+
+    res.json({ invoice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/create-customer", async (req, res) => {
   const { email, name, description } = req.body;
   try {
@@ -111,7 +222,6 @@ app.post("/update-payment-method", async (req, res) => {
 
 // app.post('/update-card', async (req, res) => {
 //   const { customerId, paymentMethodId, cardNumber, expiryDate, cvc } = req.body;
-
 //   try {
 //       // Update the payment method details in Stripe
 //       await stripe.paymentMethods.update(paymentMethodId, {
@@ -177,7 +287,6 @@ app.post("/payment-method-list", async (req, res) => {
     });
   } catch (error) {
     console.error("Error retrieving payment methods:", error);
-
     // Send a more informative error response
     res.status(500).json({ error: "Failed to retrieve payment methods" });
   }
@@ -202,37 +311,6 @@ app.post("/add-new-payment-method", async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
-  }
-});
-
-// Pending: Attch payment method to customer
-app.post("/attach-payment-method", async (req, res) => {
-  const { customerId, paymentMethodId } = req.body;
-  try {
-    // console.log(customerId, paymentMethodId);
-    // Attach the payment method to the customer
-    // await stripe.paymentMethods.attach(paymentMethodId, {
-    //   customer: customerId,
-    // });
-
-    const bb = await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customerId,
-    });
-    console.log(bb, "s");
-    // Set the payment method as the default for the customer
-    const dd = await stripe.customers.update(customerId, {
-      invoice_settings: {
-        default_payment_method: paymentMethodId,
-      },
-    });
-
-    console.log("dd", dd);
-    // res.json({
-    //   success: true,
-    //   message: "Payment method attached successfully",
-    // });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
   }
 });
 

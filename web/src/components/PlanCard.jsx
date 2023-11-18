@@ -15,6 +15,8 @@ const PlanCard = ({
   isActive,
   activeSubscriptions,
   fetchMyActiveSubscriptions,
+  updatePlan,
+  // calculateInvoice,
 }) => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -29,7 +31,7 @@ const PlanCard = ({
     }
     return null;
   }
-
+  // console.log(activeSubscriptions);
   useEffect(() => {
     if (planId) {
       setLoading(true);
@@ -94,7 +96,7 @@ const PlanCard = ({
           <strong>Active Plan</strong>
         </div>
       )}
-      <div className="w-100 p-4" style={{ height: '150px' }}>
+      <div className="w-100 p-4" style={{ height: "150px" }}>
         {planDetails?.images?.[0] && (
           <img alt="Sample" src={planDetails?.images?.[0]} width={100} />
         )}
@@ -116,9 +118,23 @@ const PlanCard = ({
         )}
 
         {!isActive && (
-          <Button onClick={() => handlePlan({ planDetails, priceDetail })}>
-            Choose Plan
-          </Button>
+          <div className="d-flex justify-content-between">
+            <Button
+              onClick={() => {
+                activeSubscriptions?.activeSubscriptions?.length
+                  ? updatePlan({ newPriceDetail: priceDetail })
+                  : handlePlan({ planDetails, priceDetail });
+              }}
+            >
+              {activeSubscriptions?.activeSubscriptions?.length
+                ? "Upgrade Plan"
+                : "Choose Plan"}
+            </Button>
+
+            {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
+              Preview effet
+            </Button> */}
+          </div>
         )}
       </CardBody>
     </Card>
