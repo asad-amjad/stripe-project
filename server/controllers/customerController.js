@@ -3,12 +3,13 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const customerController = {
   register: async (req, res) => {
-    const { email, name, description } = req.body;
     try {
+      const { email, name, description } = req.body;
+
       const customer = await stripe.customers.create({
-        email: email,
-        name: name,
-        description: "Register from app name", // Add a description from the request body
+        email,
+        name,
+        description: description || "Registered from app",
       });
 
       res.json({ customerId: customer.id });

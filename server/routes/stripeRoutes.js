@@ -7,6 +7,7 @@ const couponController = require("../controllers/couponController");
 const productController = require("../controllers/productController");
 const paymentMethodController = require("../controllers/paymentMethodController");
 const singlePaymentController = require("../controllers/singlePaymentController");
+const transactionController = require("../controllers/transactionController");
 
 // Customer
 router.post("/register-customer", customerController.register);
@@ -17,11 +18,12 @@ router.get("/product/:productId", productController.detail);
 // Subscriptions
 router.post("/create-subscription", subscriptionController.create);
 router.post(
-  "/update-subscription/:Id",
+  "/update-subscription/:subscriptionId",
   subscriptionController.update
 );
 router.post("/cancel-subscription", subscriptionController.cancel);
 router.get("/active-subscriptions/:customerId", subscriptionController.list);
+router.get("/calculate-plan-invoice", subscriptionController.calculateInvoice);
 
 // Coupon
 router.post("/validate-coupon", couponController.validation);
@@ -34,4 +36,6 @@ router.post("/set-default-method", paymentMethodController.setDefault);
 // Single Payment
 router.post("/create-payment-intent", singlePaymentController.createIntent);
 
+// Transactions
+router.get("/transaction-history/:customerId", transactionController.list);
 module.exports = router;

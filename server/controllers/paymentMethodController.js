@@ -2,7 +2,7 @@ require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const paymentMethodController = {
-    list: async (req, res) => {
+  list: async (req, res) => {
     const { customerId } = req.body;
 
     try {
@@ -31,7 +31,7 @@ const paymentMethodController = {
     }
   },
 
-// updateDefaultMethod
+  // updateDefaultMethod
   setDefault: async (req, res) => {
     try {
       const { customerId, newPaymentMethodId } = req.body;
@@ -51,27 +51,27 @@ const paymentMethodController = {
       res.status(500).json({ success: false, error: "Internal Server Error" });
     }
   },
-  
+
   addNewMethod: async (req, res) => {
     try {
-        const { token, customerId } = req.body;
-        const paymentMethod = await stripe.paymentMethods.create({
-          type: "card",
-          card: {
-            token: token.id,
-          },
-        });
-        await stripe.paymentMethods.attach(paymentMethod.id, {
-          customer: customerId,
-        });
-    
-        res
-          .status(200)
-          .json({ success: true, message: "Payment method added successfully" });
-      } catch (error) {
-        console.error("Error:", error);
-        res.status(500).json({ success: false, error: "Internal server error" });
-      }
+      const { token, customerId } = req.body;
+      const paymentMethod = await stripe.paymentMethods.create({
+        type: "card",
+        card: {
+          token: token.id,
+        },
+      });
+      await stripe.paymentMethods.attach(paymentMethod.id, {
+        customer: customerId,
+      });
+
+      res
+        .status(200)
+        .json({ success: true, message: "Payment method added successfully" });
+    } catch (error) {
+      console.error("Error:", error);
+      res.status(500).json({ success: false, error: "Internal server error" });
+    }
   },
 };
 

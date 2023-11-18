@@ -10,7 +10,7 @@ function History() {
 
     // Make the API request when the component mounts#
     if (localStorage.getItem("customerId")) {
-      const apiUrl = `http://localhost:4000/transaction-history/${localStorage.getItem(
+      const apiUrl = `http://localhost:4000/stripe/transaction-history/${localStorage.getItem(
         "customerId"
       )}`;
       axios

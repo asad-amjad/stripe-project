@@ -3,31 +3,30 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const couponController = {
   validation: async (req, res) => {
-    const { couponCode } = req.body;
     try {
+      const { couponCode } = req.body;
+
       const promotionCodes = await stripe.promotionCodes.list({
         limit: 10,
       });
 
-      const promotion = promotionCodes?.data?.find(
+      const promotion = promotionCodes.data.find(
         (promo) => promo.code === couponCode
       );
 
       if (!promotion) {
-        res.json({ valid: false, error: "In valid" });
+        return res.json({ valid: false, error: "Invalid coupon code" });
       }
 
-      if (promotion) {
-        const couponDetails = {
-          couponId: promotion.coupon.id,
-          couponName: promotion.coupon.name,
-          percentageOff: promotion.coupon.percent_off,
-        };
+      const couponDetails = {
+        couponId: promotion.coupon.id,
+        couponName: promotion.coupon.name,
+        percentageOff: promotion.coupon.percent_off,
+      };
 
-        res.json({ valid: true, couponDetails });
-      }
+      return res.json({ valid: true, couponDetails });
     } catch (error) {
-      res.json({ valid: false, error: error.message });
+      return res.json({ valid: false, error: error.message });
     }
   },
 };

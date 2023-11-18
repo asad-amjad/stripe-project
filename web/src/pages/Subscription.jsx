@@ -108,7 +108,7 @@ function Subscription() {
     const newPriceId = newPriceDetail.id;
 
     try {
-      const response = await fetch("http://localhost:4000/calculateInvoice", {
+      const response = await fetch("http://localhost:4000/stripe/calculate-plan-invoice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
