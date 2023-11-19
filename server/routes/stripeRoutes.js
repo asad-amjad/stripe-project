@@ -23,7 +23,7 @@ router.post(
 );
 router.post("/cancel-subscription", subscriptionController.cancel);
 router.get("/active-subscriptions/:customerId", subscriptionController.list);
-router.get("/calculate-plan-invoice", subscriptionController.calculateInvoice);
+router.post("/calculate-plan-invoice", subscriptionController.calculateInvoice);
 
 // Coupon
 router.post("/validate-coupon", couponController.validation);

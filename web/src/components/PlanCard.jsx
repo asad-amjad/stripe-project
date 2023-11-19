@@ -16,7 +16,7 @@ const PlanCard = ({
   activeSubscriptions,
   fetchMyActiveSubscriptions,
   updatePlan,
-  // calculateInvoice,
+  calculateInvoice,
 }) => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -31,7 +31,7 @@ const PlanCard = ({
     }
     return null;
   }
-  
+
   useEffect(() => {
     if (planId) {
       setLoading(true);
@@ -131,9 +131,9 @@ const PlanCard = ({
                 : "Choose Plan"}
             </Button>
 
-            {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
+            <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
               Preview effet
-            </Button> */}
+            </Button>
           </div>
         )}
       </CardBody>

@@ -49,6 +49,7 @@ const subscriptionController = {
   update: async (req, res) => {
     const subscriptionId = req.params.subscriptionId;
     const { subItemId, newPriceId } = req.body;
+
     try {
       const updatedSubscription = await stripe.subscriptions.update(
         subscriptionId,
@@ -62,6 +63,7 @@ const subscriptionController = {
               price: newPriceId,
             },
           ],
+          proration_behavior: "always_invoice",
         }
       );
 
@@ -139,34 +141,34 @@ const subscriptionController = {
       res.status(500).json({ error: "Internal Server Error" });
     }
   },
-  
-// TODO:
+
+  // TODO:
   calculateInvoice: async (req, res) => {
     const { subscriptionId, subItemId, newPriceId, customerId } = req.body;
     try {
       const proration_date = Math.floor(Date.now() / 1000);
-  
+
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  
+
       const items = [
         {
           id: subscription.items.data[0].id,
           price: newPriceId, // Switch to new price
         },
       ];
-  
+
       const invoice = await stripe.invoices.retrieveUpcoming({
         customer: customerId,
         subscription: subscriptionId,
         subscription_items: items,
         subscription_proration_date: proration_date,
       });
-  
+
       res.json({ invoice });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 };
 
 module.exports = subscriptionController;

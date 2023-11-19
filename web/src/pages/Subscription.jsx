@@ -6,7 +6,7 @@ import SubscriptionForm from "../components/SubscriptionForm";
 import LoginModal from "../components/LoginModal";
 import api from "../api";
 import PlanCard from "../components/PlanCard";
-// import InvoiceDetails from "../components/InvoiceDetails";
+import InvoiceDetails from "../components/InvoiceDetails";
 
 function Subscription() {
   const [modal, setModal] = useState(false);
@@ -168,7 +168,7 @@ function Subscription() {
         </Elements>
       )}
 
-      {/* <InvoiceDetails invoice={invoice} /> */}
+      <InvoiceDetails invoice={invoice} />
     </div>
   );
 }
