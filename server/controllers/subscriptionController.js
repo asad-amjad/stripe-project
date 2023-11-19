@@ -45,55 +45,34 @@ const subscriptionController = {
     }
   },
 
-  // updateSubscription
+  // Update subscription
   update: async (req, res) => {
     const subscriptionId = req.params.subscriptionId;
-    const { subItemId, newPriceId, customerId } = req.body;
+    const { subItemId, newPriceId } = req.body;
+    const proration_date = Math.floor(Date.now() / 1000);
 
     try {
-      const proration_date = Math.floor(Date.now() / 1000);
-
-      // const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-      const items = [
+      const updatedSubscription = await stripe.subscriptions.update(
+        subscriptionId,
         {
-          id: subItemId,
-          price: newPriceId, // Switch to new price
-        },
-      ];
+          items: [
+            {
+              id: subItemId,
+              deleted: true,
+            },
+            {
+              price: newPriceId,
+            },
+          ],
+          proration_behavior :'always_invoice',
+          // proration_date: proration_date,
+        }
+      );
 
-      const invoice = await stripe.invoices.retrieveUpcoming({
-        customer: customerId,
-        subscription: subscriptionId,
-        subscription_items: items,
-        subscription_proration_date: proration_date,
+      res.status(200).json({
+        message: "Subscription updated successfully",
+        data: updatedSubscription,
       });
-      console.log(invoice);
-
-      invoice.status
-
-      console.group(invoice.total / 100)
-      console.group(invoice.status)
-      // const updatedSubscription = await stripe.subscriptions.update(
-      //   subscriptionId,
-      //   {
-      //     items: [
-      //       {
-      //         id: subItemId,
-      //         deleted: true,
-      //       },
-      //       {
-      //         price: newPriceId,
-      //       },
-      //     ],
-      //     proration_behavior: "always_invoice",
-      //   }
-      // );
-
-      // res.status(200).json({
-      //   message: "Subscription updated successfully",
-      //   data: updatedSubscription,
-      // });
     } catch (error) {
       console.error("Error updating subscription:", error.message);
       res.status(500).json({ error: "Internal Server Error" });
