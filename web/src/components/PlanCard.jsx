@@ -131,9 +131,9 @@ const PlanCard = ({
                 : "Choose Plan"}
             </Button>
 
-            <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
+            {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
               Preview effet
-            </Button>
+            </Button> */}
           </div>
         )}
       </CardBody>
