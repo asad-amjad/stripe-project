@@ -6,21 +6,21 @@ import SubscriptionForm from "../components/SubscriptionForm";
 import LoginModal from "../components/LoginModal";
 import api from "../api";
 import PlanCard from "../components/PlanCard";
-import InvoiceDetails from "../components/InvoiceDetails";
+import { convertTimestampToReadable, isObjectEmpty } from "../utils";
 
 function Subscription() {
   const [modal, setModal] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState({});
   const [subscriptionPlans, setSubscriptionPlans] = useState({});
-  const [activeSubscriptionsDetails, setActiveSubscriptionsDetails] = useState({});
-  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(null);
-  const [invoice, setInvoice] = useState(null);
 
+  const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(null);
+
+  const [activeSubscription, setActiveSubscription] = useState({});
+  const [inQueueSubscription, setInQueueSubscription] = useState({});
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
   const customerId = localStorage.getItem("customerId");
 
-  const { activeSubscriptions, productIds } = activeSubscriptionsDetails || {}
 
   const fetchPlanDetails = () => {
     fetch(`http://localhost:4000/home-plans`, {
@@ -35,14 +35,18 @@ function Subscription() {
   };
 
   const fetchMyActiveSubscriptions = () => {
-    fetch(`http://localhost:4000/stripe/active-subscriptions/${customerId}`, {
+    fetch(`http://localhost:4000/stripe/subscriptions-list/${customerId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     }).then(async (r) => {
-      const { activeSubscriptions, productIds, subscriptionInQue } = await r.json();
-      setActiveSubscriptionsDetails({ activeSubscriptions, productIds, subscriptionInQue });
+      const {
+        inQueue, active
+      } = await r.json();
+
+      setActiveSubscription(active)
+      setInQueueSubscription(inQueue)
     });
   };
 
@@ -78,39 +82,13 @@ function Subscription() {
     }
   }, [localStorage.getItem("customerId")]);
 
-  const updatePlan = ({ planDetails, newPriceDetail }) => {
-    const subscriptionId = activeSubscriptions[0].id;
-    const subItemId =
-      activeSubscriptions[0]?.items.data[0]?.id;
+  const handleUpdatePlan = ({ planDetails, newPriceDetail }) => {
+    const subscriptionId = activeSubscription.id;
+    const subItemId = activeSubscription?.items.data[0]?.id;
     const newPriceId = newPriceDetail.id;
-
-    fetch(`http://localhost:4000/stripe/update-subscription/${subscriptionId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        subscriptionId: subscriptionId,
-        subItemId: subItemId,
-        newPriceId: newPriceId,
-        customerId: customerId,
-        description: `Description of ${planDetails?.name}`
-      }),
-    }).then(async (r) => {
-      const rs = await r.json();
-      fetchMyActiveSubscriptions();
-    });
-  };
-
-  // TODO:
-  const calculateInvoice = async ({ newPriceDetail }) => {
-    const subscriptionId = activeSubscriptions[0].id;
-    const subItemId =
-      activeSubscriptions[0]?.items.data[0]?.id;
-    const newPriceId = newPriceDetail.id;
-
-    try {
-      const response = await fetch("http://localhost:4000/stripe/calculate-plan-invoice", {
+    fetch(
+      `http://localhost:4000/stripe/update-subscription/${subscriptionId}`,
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -119,46 +97,47 @@ function Subscription() {
           subscriptionId: subscriptionId,
           subItemId: subItemId,
           newPriceId: newPriceId,
-          customerId: customerId
+          customerId: customerId,
+          description: `Description of ${planDetails?.name}`,
         }),
-      });
-
-      const data = await response.json();
-      setInvoice(data.invoice);
-    } catch (error) {
-      console.error("Error calculating invoice:", error);
-    }
+      }
+    ).then(async (r) => {
+      const rs = await r.json();
+      fetchMyActiveSubscriptions();
+    });
   };
 
   return (
     <div className="App">
       <LoginModal loginModal={loginModal} setLoginModal={setLoginModal} />
       <div className="">
-        {Object.keys(subscriptionPlans).length > 0 && (
-          <>
-            <h1>Subscription Plans</h1>
-            <div className="mt-4 mb-4 w-80 d-flex justify-content-center">
-              <div className="d-flex gap-5">
-                {Object.values(subscriptionPlans)?.map((k, i) => {
-                  return (
-                    <PlanCard
-                      key={i}
-                      planId={k}
-                      handlePlan={handlePlan}
-                      activeSubscriptions={activeSubscriptionsDetails}
-                      subscriptionInQue={activeSubscriptionsDetails?.subscriptionInQue}
-                      fetchMyActiveSubscriptions={fetchMyActiveSubscriptions}
-                      isActive={activeSubscriptionsDetails?.productIds?.includes(k)}
-                      updatePlan={updatePlan}
-                      calculateInvoice={calculateInvoice}
-                    />
-                  );
-                })}
-              </div>
+        <>
+          <h1>Subscription Plans</h1>
+          <div className="mt-4 mb-4 w-80 d-flex justify-content-center">
+            <div className="d-flex gap-5">
+              {Object.values(subscriptionPlans)?.map((k, i) => {
+                return (
+                  <PlanCard
+                    key={i}
+                    planId={k}
+                    handlePlan={handlePlan}
+                    fetchMyActiveSubscriptions={fetchMyActiveSubscriptions}
+                    handleUpdatePlan={handleUpdatePlan}
+                    isActiveInQueue={inQueueSubscription?.plan?.product?.includes(k)}
+                    isActive={activeSubscription?.plan?.product?.includes(k)}
+                    // shouldUpdateEnable={isObjectEmpty(activeSubscription)}
+                    shouldUpdateEnable={isObjectEmpty(activeSubscription)}
+                    activeSubscription={activeSubscription}
+                    inQueueSubscription={inQueueSubscription}
+                    disableActiveBtns={isObjectEmpty(inQueueSubscription)}
+                  />
+                );
+              })}
             </div>
-          </>
-        )}
+          </div>
+        </>
       </div>
+      {/* {console} */}
       {Object.keys(selectedPlan).length > 0 && (
         <Elements stripe={stripePromise}>
           <SubscriptionForm
@@ -171,7 +150,6 @@ function Subscription() {
         </Elements>
       )}
 
-      <InvoiceDetails invoice={invoice} />
     </div>
   );
 }

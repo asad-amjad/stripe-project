@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { convertTimestampToReadable, isObjectEmpty } from "../utils";
 
 const {
   Card,
@@ -13,25 +14,21 @@ const PlanCard = ({
   planId,
   handlePlan,
   isActive,
-  activeSubscriptions,
+  isActiveInQueue,
+
+  activeSubscription,
   fetchMyActiveSubscriptions,
-  updatePlan,
-  calculateInvoice,
-  subscriptionInQue
+  handleUpdatePlan,
+  inQueueSubscription,
+  shouldUpdateEnable,
+  disableActiveBtns
 }) => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [planDetails, setPlanDetails] = useState({});
   const [priceDetail, setPriceDetail] = useState({});
 
-  function getIdOfProductSubscription(product, activeSubscriptions) {
-    for (const subscription of activeSubscriptions) {
-      if (subscription.plan.product === product) {
-        return subscription.id;
-      }
-    }
-    return null;
-  }
+
 
   useEffect(() => {
     if (planId) {
@@ -49,11 +46,9 @@ const PlanCard = ({
     }
   }, []);
 
-  const handleCancellation = async () => {
-    const subscriptionId = getIdOfProductSubscription(
-      planId,
-      activeSubscriptions.activeSubscriptions
-    );
+  const handleCancellation = async (subscriptionId) => {
+
+
 
     setProcessing(true);
     try {
@@ -83,9 +78,39 @@ const PlanCard = ({
       // Handle error scenarios
     }
   };
-  console.log(subscriptionInQue)
-  console.log(planDetails.id)
-  const comingSubscription = planDetails?.id === subscriptionInQue?.plan.product
+
+
+  const handleRemoveFromQue = async (subscriptionId) => {
+
+    try {
+      const response = await fetch(
+        `http://localhost:4000/stripe/cancel-subscription`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ subscriptionId }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const { success, message } = await response.json();
+      if (success) {
+        setProcessing(false);
+        fetchMyActiveSubscriptions();
+      }
+    } catch (error) {
+      setProcessing(false);
+      console.error("Error cancelling subscription:", error.message);
+      // Handle error scenarios
+    }
+  };
+
+
   return (
     <Card
       style={{
@@ -94,26 +119,50 @@ const PlanCard = ({
         borderWidth: isActive && "3px",
       }}
     >
-      {isActive && (
-        <div className="text-success mt-1">
-          <strong>Active Plan</strong>
-        </div>
-      )}
 
-      {comingSubscription && (
+
+      {isActiveInQueue && (
         <div className="text-success mt-1">
-          <strong>In Que</strong>
+          <span>Active In Que</span>
         </div>
       )}
 
 
+      {/* <div className="text-success mt-1">
+        <span style={{ fontSize: '12px' }}>Current period end: {convertTimestampToReadable(activeSubscription.current_period_end)}</span>
+      </div> */}
+
+
+
+
+      {/* <div className="text-success mt-1">
+        <span style={{ fontSize: '12px' }}>canceled_at: {convertTimestampToReadable(activeSubscription?.canceled_at)}</span>
+      </div> */}
+
+
+      {isActive &&
+        <div className="text-success mt-1">
+          <span style={{ fontSize: '12px' }}>Cancel At: {convertTimestampToReadable(activeSubscription?.cancel_at)}</span>
+        </div>
+      }
+
+      {isActiveInQueue &&
+        <div className="text-success mt-1">
+          <span style={{ fontSize: '12px' }}>Start date: {convertTimestampToReadable(inQueueSubscription?.trial_end)}</span>
+        </div>
+      }
+
+
+
+      {/* console.log(activeSubscription?.canceled_at)
+  console.log(activeSubscription?.cancel_at) */}
+      {/* {console.log(convertTimestampToReadable(activeSubscription.current_period_end))} */}
 
       <div className="w-100 p-4" style={{ height: "150px" }}>
         {planDetails?.images?.[0] && (
           <img alt="Sample" src={planDetails?.images?.[0]} width={100} />
         )}
       </div>
-
       <CardBody>
         <CardTitle tag="h5">{planDetails?.name}</CardTitle>
         <CardSubtitle className="mb-2 text-muted" tag="h6">
@@ -123,7 +172,7 @@ const PlanCard = ({
         <CardText>{planDetails?.description}</CardText>
 
         {isActive && (
-          <Button onClick={() => handleCancellation()}>
+          <Button onClick={() => handleCancellation(activeSubscription?.id)}>
             {" "}
             {processing ? "Processing.." : "Cancel"}
           </Button>
@@ -131,19 +180,29 @@ const PlanCard = ({
 
         {!isActive && (
           <div className="d-flex justify-content-between">
-            {comingSubscription ?'Remove from Que':
-            <Button
-            onClick={() => {
-                activeSubscriptions?.activeSubscriptions?.length
-                  ? updatePlan({ planDetails, newPriceDetail: priceDetail })
-                  : handlePlan({ planDetails, priceDetail });
+            {isActiveInQueue ? (
+              <Button
+                // disabled={!isQueueEmpty}
+                onClick={() => {
+                  handleRemoveFromQue(inQueueSubscription?.id);
                 }}
-                >
-              {activeSubscriptions?.activeSubscriptions?.length
-                ? "Upgrade Plan"
-                : "Choose Plan"}
-            </Button>
-            }
+              >
+                Remove From Que
+              </Button>
+            ) : (
+              <Button
+                disabled={!disableActiveBtns}
+                onClick={() => {
+                  shouldUpdateEnable
+                    ? handlePlan({ planDetails, priceDetail })
+                    : handleUpdatePlan({ planDetails, newPriceDetail: priceDetail });
+                }}
+              >
+                {shouldUpdateEnable
+                  ? "Choose Plan"
+                  : "Upgrade Plan"}
+              </Button>
+            )}
 
             {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
               Preview effet

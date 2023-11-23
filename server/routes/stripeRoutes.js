@@ -22,8 +22,7 @@ router.post(
   subscriptionController.update
 );
 router.post("/cancel-subscription", subscriptionController.cancel);
-router.get("/active-subscriptions/:customerId", subscriptionController.list);
-router.post("/calculate-plan-invoice", subscriptionController.calculateInvoice);
+router.get("/subscriptions-list/:customerId", subscriptionController.list);
 
 // Coupon
 router.post("/validate-coupon", couponController.validation);
