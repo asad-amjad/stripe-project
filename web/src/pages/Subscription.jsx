@@ -41,8 +41,8 @@ function Subscription() {
         "Content-Type": "application/json",
       },
     }).then(async (r) => {
-      const { activeSubscriptions, productIds } = await r.json();
-      setActiveSubscriptionsDetails({ activeSubscriptions, productIds });
+      const { activeSubscriptions, productIds, subscriptionInQue } = await r.json();
+      setActiveSubscriptionsDetails({ activeSubscriptions, productIds, subscriptionInQue });
     });
   };
 
@@ -78,7 +78,7 @@ function Subscription() {
     }
   }, [localStorage.getItem("customerId")]);
 
-  const updatePlan = ({ newPriceDetail }) => {
+  const updatePlan = ({ planDetails, newPriceDetail }) => {
     const subscriptionId = activeSubscriptions[0].id;
     const subItemId =
       activeSubscriptions[0]?.items.data[0]?.id;
@@ -93,14 +93,16 @@ function Subscription() {
         subscriptionId: subscriptionId,
         subItemId: subItemId,
         newPriceId: newPriceId,
+        customerId: customerId,
+        description: `Description of ${planDetails?.name}`
       }),
     }).then(async (r) => {
       const rs = await r.json();
       fetchMyActiveSubscriptions();
     });
   };
-  
-// TODO:
+
+  // TODO:
   const calculateInvoice = async ({ newPriceDetail }) => {
     const subscriptionId = activeSubscriptions[0].id;
     const subItemId =
@@ -144,6 +146,7 @@ function Subscription() {
                       planId={k}
                       handlePlan={handlePlan}
                       activeSubscriptions={activeSubscriptionsDetails}
+                      subscriptionInQue={activeSubscriptionsDetails?.subscriptionInQue}
                       fetchMyActiveSubscriptions={fetchMyActiveSubscriptions}
                       isActive={activeSubscriptionsDetails?.productIds?.includes(k)}
                       updatePlan={updatePlan}

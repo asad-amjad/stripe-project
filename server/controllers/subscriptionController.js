@@ -45,34 +45,81 @@ const subscriptionController = {
     }
   },
 
-  // Update subscription
   update: async (req, res) => {
     const subscriptionId = req.params.subscriptionId;
-    const { subItemId, newPriceId } = req.body;
-    const proration_date = Math.floor(Date.now() / 1000);
+    const { subItemId, newPriceId, customerId, description } = req.body;
 
     try {
-      const updatedSubscription = await stripe.subscriptions.update(
-        subscriptionId,
-        {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+      const currentPlanAmount = await subscription.items.data[0].price
+        .unit_amount;
+      const newPlanAmount = await stripe.prices
+        .retrieve(newPriceId)
+        .then((price) => price.unit_amount);
+
+      // Check if it's a downgrade
+      const isDownGrade = currentPlanAmount > newPlanAmount;
+
+      if (isDownGrade) {
+        const current_period_end = subscription.current_period_end;
+        // console.log(subscription)
+        const updatesubscription = await stripe.subscriptions.update(
+          subscriptionId,
+          {
+            cancel_at: current_period_end,
+          }
+        );
+
+        // console.log(updatesubscription);
+        // get current end time
+        // Start new at end of that time
+        // current should stop also
+
+        // const  = await stripe.subscriptions.create({
+
+        const upComingsubscription = await stripe.subscriptions.create({
+          customer: customerId,
           items: [
-            {
-              id: subItemId,
-              deleted: true,
-            },
             {
               price: newPriceId,
             },
           ],
-          proration_behavior :'always_invoice',
-          // proration_date: proration_date,
-        }
-      );
+          // current_period_start: current_period_end,
+          trial_end: current_period_end,
+          billing_cycle_anchor: current_period_end,
+        });
+       
 
-      res.status(200).json({
-        message: "Subscription updated successfully",
-        data: updatedSubscription,
-      });
+
+        res.status(200).json({
+          message: "Downgrade subscription updated successfully",
+          // data: downSubscription,
+        });
+      } else {
+        // If it's an upgrade, proceed as before
+        const updatedSubscription = await stripe.subscriptions.update(
+          subscriptionId,
+          {
+            items: [
+              {
+                id: subItemId,
+                deleted: true,
+              },
+              {
+                price: newPriceId,
+              },
+            ],
+            proration_behavior: "always_invoice",
+            description: description,
+          }
+        );
+
+        res.status(200).json({
+          message: "Upgrade subscription updated successfully",
+          data: updatedSubscription,
+        });
+      }
     } catch (error) {
       console.error("Error updating subscription:", error.message);
       res.status(500).json({ error: "Internal Server Error" });
@@ -125,6 +172,23 @@ const subscriptionController = {
   list: async (req, res) => {
     const customerId = req.params.customerId;
     try {
+      const trialing = await stripe.subscriptions.list({
+        status: "trialing",
+        customer: customerId,
+      });
+
+      const subscriptionInQue = trialing?.data.flatMap((subscription) => {
+        return subscription.items.data.map((item) => {
+          return item;
+        });
+      });
+
+      console.log(trialing);
+      // console.log(
+      //   "trialing.data.trial_end",
+      //   new Date(trialing.data[0].trial_end * 1000)
+      // );
+
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
         status: "active",
@@ -137,7 +201,11 @@ const subscriptionController = {
           return item.price.product;
         });
       });
-      res.json({ activeSubscriptions, productIds });
+      res.json({
+        activeSubscriptions,
+        productIds,
+        subscriptionInQue: trialing.data[0],
+      });
     } catch (error) {
       console.error("Error retrieving active subscriptions:", error.message);
       res.status(500).json({ error: "Internal Server Error" });

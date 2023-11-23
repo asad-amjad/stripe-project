@@ -17,6 +17,7 @@ const PlanCard = ({
   fetchMyActiveSubscriptions,
   updatePlan,
   calculateInvoice,
+  subscriptionInQue
 }) => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -82,7 +83,9 @@ const PlanCard = ({
       // Handle error scenarios
     }
   };
-
+  console.log(subscriptionInQue)
+  console.log(planDetails.id)
+  const comingSubscription = planDetails?.id === subscriptionInQue?.plan.product
   return (
     <Card
       style={{
@@ -96,6 +99,15 @@ const PlanCard = ({
           <strong>Active Plan</strong>
         </div>
       )}
+
+      {comingSubscription && (
+        <div className="text-success mt-1">
+          <strong>In Que</strong>
+        </div>
+      )}
+
+
+
       <div className="w-100 p-4" style={{ height: "150px" }}>
         {planDetails?.images?.[0] && (
           <img alt="Sample" src={planDetails?.images?.[0]} width={100} />
@@ -119,17 +131,19 @@ const PlanCard = ({
 
         {!isActive && (
           <div className="d-flex justify-content-between">
+            {comingSubscription ?'Remove from Que':
             <Button
-              onClick={() => {
+            onClick={() => {
                 activeSubscriptions?.activeSubscriptions?.length
-                  ? updatePlan({ newPriceDetail: priceDetail })
+                  ? updatePlan({ planDetails, newPriceDetail: priceDetail })
                   : handlePlan({ planDetails, priceDetail });
-              }}
-            >
+                }}
+                >
               {activeSubscriptions?.activeSubscriptions?.length
                 ? "Upgrade Plan"
                 : "Choose Plan"}
             </Button>
+            }
 
             {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
               Preview effet
