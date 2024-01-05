@@ -21,7 +21,6 @@ function Subscription() {
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
   const customerId = localStorage.getItem("customerId");
 
-
   const fetchPlanDetails = () => {
     fetch(`http://localhost:4000/home-plans`, {
       method: "GET",
@@ -34,6 +33,21 @@ function Subscription() {
     });
   };
 
+
+  const fetchAllProducts = () => {
+    fetch(`http://localhost:4000/stripe/products`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then(async (r) => {
+      const aa = await r.json();
+      console.log(aa)
+      // setSubscriptionPlans(plans);
+    });
+  };
+
+
   const fetchMyActiveSubscriptions = () => {
     fetch(`http://localhost:4000/stripe/subscriptions-list/${customerId}`, {
       method: "GET",
@@ -41,12 +55,10 @@ function Subscription() {
         "Content-Type": "application/json",
       },
     }).then(async (r) => {
-      const {
-        inQueue, active
-      } = await r.json();
+      const { inQueue, active } = await r.json();
 
-      setActiveSubscription(active)
-      setInQueueSubscription(inQueue)
+      setActiveSubscription(active);
+      setInQueueSubscription(inQueue);
     });
   };
 
@@ -63,6 +75,33 @@ function Subscription() {
     });
   };
 
+
+  const fetchRecord = () => {
+    fetch(`http://localhost:4000/stripe/fetch-record/${customerId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then(async (r) => {
+      const defaultPaymentMethod = await r.json();
+      console.log('sa', defaultPaymentMethod)
+      // setDefaultPaymentMethod(defaultPaymentMethod);
+    });
+  };
+
+  const fetchInvoice = () => {
+    fetch(`http://localhost:4000/stripe/invoice/${customerId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then(async (r) => {
+      const aa = await r.json();
+      console.log('sa', aa)
+      // setDefaultPaymentMethod(defaultPaymentMethod);
+    });
+  };
+
   const toggle = () => {
     setModal(!modal);
   };
@@ -72,11 +111,16 @@ function Subscription() {
     setSelectedPlan(e);
   };
 
+  // useEffect(() => {
+    // fetchAllProducts();
+  // }, []);
+
   useEffect(() => {
     if (!localStorage.getItem("customerId")) {
       setLoginModal(true);
     } else {
       fetchPlanDetails();
+      fetchInvoice()
       fetchMyActiveSubscriptions();
       fetchMyDefaultPaymentMethod();
     }
@@ -123,7 +167,9 @@ function Subscription() {
                     handlePlan={handlePlan}
                     fetchMyActiveSubscriptions={fetchMyActiveSubscriptions}
                     handleUpdatePlan={handleUpdatePlan}
-                    isActiveInQueue={inQueueSubscription?.plan?.product?.includes(k)}
+                    isActiveInQueue={inQueueSubscription?.plan?.product?.includes(
+                      k
+                    )}
                     isActive={activeSubscription?.plan?.product?.includes(k)}
                     // shouldUpdateEnable={isObjectEmpty(activeSubscription)}
                     shouldUpdateEnable={isObjectEmpty(activeSubscription)}
@@ -137,7 +183,7 @@ function Subscription() {
           </div>
         </>
       </div>
-      {/* {console} */}
+      <p onClick={()=>fetchRecord()}>Fectch API</p>
       {Object.keys(selectedPlan).length > 0 && (
         <Elements stripe={stripePromise}>
           <SubscriptionForm
@@ -149,7 +195,6 @@ function Subscription() {
           />
         </Elements>
       )}
-
     </div>
   );
 }

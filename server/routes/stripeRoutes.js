@@ -8,12 +8,16 @@ const productController = require("../controllers/productController");
 const paymentMethodController = require("../controllers/paymentMethodController");
 const singlePaymentController = require("../controllers/singlePaymentController");
 const transactionController = require("../controllers/transactionController");
+const invoiceController = require("../controllers/invoiceController");
+const fetchRecordController = require("../controllers/fetchRecordController");
+const usageRecordMiddleware = require("../middlewares/usageRecordMiddleware");
 
 // Customer
 router.post("/register-customer", customerController.register);
 
 //Products
 router.get("/product/:productId", productController.detail);
+// router.get("/products", productController.list);
 
 // Subscriptions
 router.post("/create-subscription", subscriptionController.create);
@@ -21,6 +25,7 @@ router.post(
   "/update-subscription/:subscriptionId",
   subscriptionController.update
 );
+
 router.post("/cancel-subscription", subscriptionController.cancel);
 router.get("/subscriptions-list/:customerId", subscriptionController.list);
 
@@ -36,5 +41,7 @@ router.post("/set-default-method", paymentMethodController.setDefault);
 router.post("/create-payment-intent", singlePaymentController.createIntent);
 
 // Transactions
-router.get("/transaction-history/:customerId", transactionController.list);
+router.get("/fetch-record/:customerId", usageRecordMiddleware, fetchRecordController.fetchRecord);
+router.get("/invoice/:customerId", invoiceController.list);
+
 module.exports = router;
