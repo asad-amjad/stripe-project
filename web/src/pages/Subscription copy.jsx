@@ -13,7 +13,6 @@ function Subscription() {
   const [loginModal, setLoginModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState({});
   const [subscriptionPlans, setSubscriptionPlans] = useState({});
-  const [products, setProducts] = useState([]);
 
   const [defaultPaymentMethod, setDefaultPaymentMethod] = useState(null);
 
@@ -34,6 +33,7 @@ function Subscription() {
     });
   };
 
+
   const fetchAllProducts = () => {
     fetch(`http://localhost:4000/stripe/products`, {
       method: "GET",
@@ -42,9 +42,11 @@ function Subscription() {
       },
     }).then(async (r) => {
       const products = await r.json();
-      setProducts(products);
+      console.log(aa)
+      // setSubscriptionPlans(plans);
     });
   };
+
 
   const fetchMyActiveSubscriptions = () => {
     fetch(`http://localhost:4000/stripe/subscriptions-list/${customerId}`, {
@@ -73,6 +75,7 @@ function Subscription() {
     });
   };
 
+
   const fetchRecord = () => {
     fetch(`http://localhost:4000/stripe/fetch-record/${customerId}`, {
       method: "GET",
@@ -81,7 +84,7 @@ function Subscription() {
       },
     }).then(async (r) => {
       const defaultPaymentMethod = await r.json();
-      console.log("sa", defaultPaymentMethod);
+      console.log('sa', defaultPaymentMethod)
       // setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
@@ -94,7 +97,7 @@ function Subscription() {
       },
     }).then(async (r) => {
       const aa = await r.json();
-      console.log("sa", aa);
+      console.log('sa', aa)
       // setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
@@ -103,9 +106,9 @@ function Subscription() {
     setModal(!modal);
   };
 
-  const handlePlan = (item) => {
+  const handlePlan = (e) => {
     setModal(!modal);
-    setSelectedPlan(item);
+    setSelectedPlan(e);
   };
 
   useEffect(() => {
@@ -116,37 +119,37 @@ function Subscription() {
     if (!localStorage.getItem("customerId")) {
       setLoginModal(true);
     } else {
-      // fetchPlanDetails();
-      // fetchInvoice();
-      // fetchMyActiveSubscriptions();
-      // fetchMyDefaultPaymentMethod();
+      fetchPlanDetails();
+      fetchInvoice()
+      fetchMyActiveSubscriptions();
+      fetchMyDefaultPaymentMethod();
     }
   }, [localStorage.getItem("customerId")]);
 
-  // const handleUpdatePlan = ({ planDetails, newPriceDetail }) => {
-  //   const subscriptionId = activeSubscription.id;
-  //   const subItemId = activeSubscription?.items.data[0]?.id;
-  //   const newPriceId = newPriceDetail.id;
-  //   fetch(
-  //     `http://localhost:4000/stripe/update-subscription/${subscriptionId}`,
-  //     {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({
-  //         subscriptionId: subscriptionId,
-  //         subItemId: subItemId,
-  //         newPriceId: newPriceId,
-  //         customerId: customerId,
-  //         description: `Description of ${planDetails?.name}`,
-  //       }),
-  //     }
-  //   ).then(async (r) => {
-  //     const rs = await r.json();
-  //     fetchMyActiveSubscriptions();
-  //   });
-  // };
+  const handleUpdatePlan = ({ planDetails, newPriceDetail }) => {
+    const subscriptionId = activeSubscription.id;
+    const subItemId = activeSubscription?.items.data[0]?.id;
+    const newPriceId = newPriceDetail.id;
+    fetch(
+      `http://localhost:4000/stripe/update-subscription/${subscriptionId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subscriptionId: subscriptionId,
+          subItemId: subItemId,
+          newPriceId: newPriceId,
+          customerId: customerId,
+          description: `Description of ${planDetails?.name}`,
+        }),
+      }
+    ).then(async (r) => {
+      const rs = await r.json();
+      fetchMyActiveSubscriptions();
+    });
+  };
 
   return (
     <div className="App">
@@ -156,7 +159,7 @@ function Subscription() {
           <h1>Subscription Plans</h1>
           <div className="mt-4 mb-4 w-80 d-flex justify-content-center">
             <div className="d-flex gap-5">
-              {/* {Object.values(subscriptionPlans)?.map((k, i) => {
+              {Object.values(subscriptionPlans)?.map((k, i) => {
                 return (
                   <PlanCard
                     key={i}
@@ -175,38 +178,12 @@ function Subscription() {
                     disableActiveBtns={isObjectEmpty(inQueueSubscription)}
                   />
                 );
-              })} */}
-              {/* {console.log(activeSubscription)} */}
-
-
-              {products?.map((k, i) => {
-                return (
-                  <PlanCard
-                    key={i}
-                    // planId={k}
-                    item={k}
-                    handlePlan={handlePlan}
-                    // fetchMyActiveSubscriptions={fetchMyActiveSubscriptions}
-                    // handleUpdatePlan={handleUpdatePlan}
-                    // isActiveInQueue={inQueueSubscription?.plan?.product?.includes(
-                    //   k
-                    // )}
-                    // isActive={activeSubscription?.plan?.product?.includes(k)}
-                    isActive={false}
-                    // isActive={activeSubscription?.plan?.product?.id?.includes(k?.id)}
-                  // shouldUpdateEnable={isObjectEmpty(activeSubscription)}
-                  // shouldUpdateEnable={isObjectEmpty(activeSubscription)}
-                  // activeSubscription={activeSubscription}
-                  // inQueueSubscription={inQueueSubscription}
-                  // disableActiveBtns={isObjectEmpty(inQueueSubscription)}
-                  />
-                );
               })}
             </div>
           </div>
         </>
       </div>
-      <p onClick={() => fetchRecord()}>Fectch API</p>
+      <p onClick={()=>fetchRecord()}>Fectch API</p>
       {Object.keys(selectedPlan).length > 0 && (
         <Elements stripe={stripePromise}>
           <SubscriptionForm

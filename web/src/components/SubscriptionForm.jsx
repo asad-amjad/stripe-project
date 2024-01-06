@@ -27,7 +27,7 @@ const SubscriptionForm = ({
 
   const customerId = localStorage.getItem("customerId"); // Get the customer ID
   const customerEmail = localStorage.getItem("customerEmail"); // Get the customer ID
-
+console.log(selectedPlan)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -53,8 +53,8 @@ const SubscriptionForm = ({
         body: JSON.stringify({
           customerId: customerId,
           paymentMethodId: paymentMethod.id,
-          priceId: selectedPlan?.planDetails?.default_price,
-          subscriptionDescription: selectedPlan?.planDetails?.name,
+          priceId: selectedPlan?.extended_price_details?.default_price,
+          subscriptionDescription: selectedPlan?.name,
           coupon: validCoupon?.couponId,
           isDefaultPayment: false,
           // geZbHDVJ
@@ -87,8 +87,8 @@ const SubscriptionForm = ({
       body: JSON.stringify({
         customerId: customerId,
         paymentMethodId: defaultPaymentMethod.id,
-        priceId: selectedPlan?.planDetails?.default_price,
-        subscriptionDescription: selectedPlan?.planDetails?.name,
+        priceId: selectedPlan?.extended_price_details?.default_price,
+        subscriptionDescription: selectedPlan?.name,
         coupon: validCoupon?.couponId,
         isDefaultPayment: true,
       }),
@@ -135,13 +135,13 @@ const SubscriptionForm = ({
   };
 
   useEffect(() => {
-    setPrice(selectedPlan?.priceDetail?.unit_amount);
+    setPrice(selectedPlan?.extended_price_details?.unit_amount);
   }, [selectedPlan]);
 
   return (
     <Modal isOpen={open} toggle={toggle}>
       <ModalHeader toggle={toggle}>
-        {selectedPlan?.planDetails?.name}
+        {selectedPlan?.name}
       </ModalHeader>
       <ModalBody>
         {" "}

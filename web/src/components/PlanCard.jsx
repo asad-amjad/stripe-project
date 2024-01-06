@@ -11,6 +11,7 @@ const {
 } = require("reactstrap");
 
 const PlanCard = ({
+  item,
   planId,
   handlePlan,
   isActive,
@@ -21,35 +22,14 @@ const PlanCard = ({
   handleUpdatePlan,
   inQueueSubscription,
   shouldUpdateEnable,
-  disableActiveBtns
+  disableActiveBtns,
 }) => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [planDetails, setPlanDetails] = useState({});
-  const [priceDetail, setPriceDetail] = useState({});
 
-
-
-  useEffect(() => {
-    if (planId) {
-      setLoading(true);
-      fetch(`http://localhost:4000/stripe/product/${planId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }).then(async (r) => {
-        const { product } = await r.json();
-        setPlanDetails(product);
-        setPriceDetail(product?.extended_price_details);
-      });
-    }
-  }, []);
+  const priceDetail = item?.extended_price_details;
 
   const handleCancellation = async (subscriptionId) => {
-
-
-
     setProcessing(true);
     try {
       const response = await fetch(
@@ -78,10 +58,8 @@ const PlanCard = ({
       // Handle error scenarios
     }
   };
-
-
+  // console.log(isActive);
   const handleRemoveFromQue = async (subscriptionId) => {
-
     try {
       const response = await fetch(
         `http://localhost:4000/stripe/cancel-subscription`,
@@ -110,7 +88,6 @@ const PlanCard = ({
     }
   };
 
-
   return (
     <Card
       style={{
@@ -119,57 +96,54 @@ const PlanCard = ({
         borderWidth: isActive && "3px",
       }}
     >
-
-
       {isActiveInQueue && (
         <div className="text-success mt-1">
           <span>Active In Que</span>
         </div>
       )}
 
-
       {/* <div className="text-success mt-1">
         <span style={{ fontSize: '12px' }}>Current period end: {convertTimestampToReadable(activeSubscription.current_period_end)}</span>
       </div> */}
-
-
-
 
       {/* <div className="text-success mt-1">
         <span style={{ fontSize: '12px' }}>canceled_at: {convertTimestampToReadable(activeSubscription?.canceled_at)}</span>
       </div> */}
 
-
-      {isActive &&
+      {isActive && (
         <div className="text-success mt-1">
-          <span style={{ fontSize: '12px' }}>Cancel At: {convertTimestampToReadable(activeSubscription?.cancel_at)}</span>
+          <span style={{ fontSize: "12px" }}>
+            Cancel At:{" "}
+            {convertTimestampToReadable(activeSubscription?.cancel_at)}
+          </span>
         </div>
-      }
+      )}
 
-      {isActiveInQueue &&
+      {isActiveInQueue && (
         <div className="text-success mt-1">
-          <span style={{ fontSize: '12px' }}>Start date: {convertTimestampToReadable(inQueueSubscription?.trial_end)}</span>
+          <span style={{ fontSize: "12px" }}>
+            Start date:{" "}
+            {convertTimestampToReadable(inQueueSubscription?.trial_end)}
+          </span>
         </div>
-      }
-
-
+      )}
 
       {/* console.log(activeSubscription?.canceled_at)
   console.log(activeSubscription?.cancel_at) */}
       {/* {console.log(convertTimestampToReadable(activeSubscription.current_period_end))} */}
 
       <div className="w-100 p-4" style={{ height: "150px" }}>
-        {planDetails?.images?.[0] && (
-          <img alt="Sample" src={planDetails?.images?.[0]} width={100} />
+        {item?.images?.[0] && (
+          <img alt="Sample" src={item?.images?.[0]} width={100} />
         )}
       </div>
       <CardBody>
-        <CardTitle tag="h5">{planDetails?.name}</CardTitle>
+        <CardTitle tag="h5">{item?.name}</CardTitle>
         <CardSubtitle className="mb-2 text-muted" tag="h6">
           ${priceDetail?.unit_amount / 100 || 0} /{" "}
           {priceDetail?.recurring?.interval}
         </CardSubtitle>
-        <CardText>{planDetails?.description}</CardText>
+        <CardText>{item?.description}</CardText>
 
         {isActive && (
           <Button onClick={() => handleCancellation(activeSubscription?.id)}>
@@ -177,12 +151,19 @@ const PlanCard = ({
             {processing ? "Processing.." : "Cancel"}
           </Button>
         )}
-
         {!isActive && (
+          <Button
+            onClick={() => {
+              handlePlan(item);
+            }}
+          >
+            Choose Plan
+          </Button>
+        )}
+        {/* {!isActive && (
           <div className="d-flex justify-content-between">
             {isActiveInQueue ? (
               <Button
-                // disabled={!isQueueEmpty}
                 onClick={() => {
                   handleRemoveFromQue(inQueueSubscription?.id);
                 }}
@@ -194,21 +175,19 @@ const PlanCard = ({
                 disabled={!disableActiveBtns}
                 onClick={() => {
                   shouldUpdateEnable
-                    ? handlePlan({ planDetails, priceDetail })
-                    : handleUpdatePlan({ planDetails, newPriceDetail: priceDetail });
+                    ? handlePlan({ item, priceDetail })
+                    : handleUpdatePlan({ item, newPriceDetail: priceDetail });
                 }}
               >
-                {shouldUpdateEnable
-                  ? "Choose Plan"
-                  : "Upgrade Plan"}
+                {shouldUpdateEnable ? "Choose Plan" : "Upgrade Plan"}
               </Button>
             )}
 
-            {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
-              Preview effet
-            </Button> */}
           </div>
-        )}
+        )} */}
+        {/* <Button onClick={() => calculateInvoice({ newPriceDetail: priceDetail })}>
+          Preview effet
+        </Button> */}
       </CardBody>
     </Card>
   );
