@@ -20,9 +20,9 @@ app.get("/public-key", (req, res) => {
 app.get("/home-plans", async (req, res) => {
   res.send({
     plans: {
-      plan_a: process.env.STRIPE_HOME_PLAN_A,
-      plan_b: process.env.STRIPE_HOME_PLAN_B,
-      plan_c: process.env.STRIPE_HOME_PLAN_C,
+      plan_a: 'prod_PKe9v9k9Zc39Ik',
+      plan_b: 'prod_PKFTVWt7NLzP3x',
+      // plan_c: 'prod_PKe0Y96e2HgFpD',
     },
   });
 });

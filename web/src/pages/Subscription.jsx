@@ -111,18 +111,18 @@ function Subscription() {
     setSelectedPlan(e);
   };
 
-  // useEffect(() => {
-    // fetchAllProducts();
-  // }, []);
+  useEffect(() => {
+    fetchPlanDetails();
+  }, []);
 
   useEffect(() => {
     if (!localStorage.getItem("customerId")) {
       setLoginModal(true);
     } else {
       fetchPlanDetails();
-      fetchInvoice()
+      // fetchInvoice()
       fetchMyActiveSubscriptions();
-      fetchMyDefaultPaymentMethod();
+      // fetchMyDefaultPaymentMethod();
     }
   }, [localStorage.getItem("customerId")]);
 

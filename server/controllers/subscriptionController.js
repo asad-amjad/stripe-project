@@ -28,7 +28,28 @@ const subscriptionController = {
             default_payment_method: paymentMethodId,
           },
         });
+
+        // res.json({ subscriptionId: subscription.id });
+
+        // const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntent?.id);
+
+        // console.log(confirmedPaymentIntent)
+
+        // const invoice = await stripe.invoices.create({
+        //   customer: customerId,
+        // });
+
+        // console.log(invoice)
       }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 500, // Replace with the actual amount in cents
+        currency: "cad", // Replace with the actual currency
+        customer: customerId,
+        payment_method: paymentMethodId,
+        confirm: true, // Ensure automatic confirmation
+        return_url: "https://your-website.com/success", // Replace with your actual success URL
+      });
 
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
@@ -41,6 +62,19 @@ const subscriptionController = {
         default_payment_method: req.body.paymentMethodId,
         description: subscriptionDescription,
       });
+
+
+      // const subscription = await stripe.subscriptions.create({
+      //   customer: customerId,
+      //   items: [
+      //     {
+      //       price: priceId,
+      //     },
+      //   ],
+      //   coupon: coupon,
+      //   default_payment_method: req.body.paymentMethodId,
+      //   description: subscriptionDescription,
+      // });
       res.json({ subscriptionId: subscription.id });
     } catch (error) {
       console.error("Error creating subscription:", error);
