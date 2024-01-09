@@ -14,6 +14,7 @@ const subscriptionController = {
       subscriptionDescription,
       coupon,
       isDefaultPayment,
+      amount,
     } = req.body;
 
     try {
@@ -42,8 +43,17 @@ const subscriptionController = {
         // console.log(invoice)
       }
 
+
+      // const customerBalanceTransaction = await stripe.customers.createBalanceTransaction(
+      //   customerId,
+      //   {
+      //     amount: -500,
+      //     currency: 'cad',
+      //   }
+      // );
+
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: 500, // Replace with the actual amount in cents
+        amount: amount, // Replace with the actual amount in cents
         currency: "cad", // Replace with the actual currency
         customer: customerId,
         payment_method: paymentMethodId,
@@ -61,6 +71,7 @@ const subscriptionController = {
         coupon: coupon,
         default_payment_method: req.body.paymentMethodId,
         description: subscriptionDescription,
+        billing_cycle_anchor: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // Set to a future timestamp (e.g., 7 days from now)
       });
 
 

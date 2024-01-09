@@ -3,7 +3,6 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 let callCount = 0;
 let totalCost = 0;
-
 const usageRecordMiddleware = async (req, res, next) => {
   const customerId = req.params.customerId;
   try {
@@ -13,8 +12,8 @@ const usageRecordMiddleware = async (req, res, next) => {
     callCount++;
 
     function calculatePrice() {
-      // For simplicity, Fixed price of $5 per call
-      return 2;
+      // For simplicity, Fixed price of $0.5 per call
+      return 0.5;
     }
 
     // Calculate price based on some logic (you can customize this)
@@ -47,13 +46,14 @@ const usageRecordMiddleware = async (req, res, next) => {
             quantity: 1,
           }
         );
-        req.usageRecord = usageRecord; // Attach usage record to request object
+        req.usageRecord = usageRecord;
       }
     }
-
-    console.log(
-      `Call #${callCount} - Price: $${price} - Total Cost: $${totalCost}`
-    );
+    req.body.call_count = callCount; // Attach usage record to request object
+    req.body.used_amount = totalCost;
+    // console.log(
+    //   `Call #${callCount} - Price: $${price} - Total Cost: $${totalCost}`
+    // );
     next(); // Continue to the next route handler
   } catch (error) {
     console.error("Error creating subscription:", error);

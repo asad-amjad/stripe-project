@@ -24,6 +24,7 @@ const SubscriptionForm = ({
   const [validCoupon, setValidCoupon] = useState({});
   const [showCoupen, setShowCoupen] = useState(false);
   const [chooseOtherPayment, setChooseOtherPayment] = useState(false);
+  const [amount, setAmount] = useState(0);
 
   const customerId = localStorage.getItem("customerId"); // Get the customer ID
   const customerEmail = localStorage.getItem("customerEmail"); // Get the customer ID
@@ -45,21 +46,25 @@ const SubscriptionForm = ({
       setLoading(false);
     } else {
       // Send paymentMethod.id and customerId to your backend to create a subscription
-      const result = await fetch("http://localhost:4000/stripe/create-subscription", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customerId: customerId,
-          paymentMethodId: paymentMethod.id,
-          priceId: selectedPlan?.planDetails?.default_price,
-          subscriptionDescription: selectedPlan?.planDetails?.name,
-          coupon: validCoupon?.couponId,
-          isDefaultPayment: false,
-          // geZbHDVJ
-        }),
-      });
+      const result = await fetch(
+        "http://localhost:4000/stripe/create-subscription",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId: customerId,
+            paymentMethodId: paymentMethod.id,
+            priceId: selectedPlan?.planDetails?.default_price,
+            subscriptionDescription: selectedPlan?.planDetails?.name,
+            coupon: validCoupon?.couponId,
+            isDefaultPayment: false,
+            amount:amount
+            // geZbHDVJ
+          }),
+        }
+      );
       if (result.ok) {
         const { subscriptionId } = await result.json();
         if (subscriptionId) {
@@ -79,20 +84,24 @@ const SubscriptionForm = ({
   const handleSubmitWithDefaultPayment = async (e) => {
     setLoading(true);
 
-    const result = await fetch("http://localhost:4000/stripe/create-subscription", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        customerId: customerId,
-        paymentMethodId: defaultPaymentMethod.id,
-        priceId: selectedPlan?.planDetails?.default_price,
-        subscriptionDescription: selectedPlan?.planDetails?.name,
-        coupon: validCoupon?.couponId,
-        isDefaultPayment: true,
-      }),
-    });
+    const result = await fetch(
+      "http://localhost:4000/stripe/create-subscription",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerId: customerId,
+          paymentMethodId: defaultPaymentMethod.id,
+          priceId: selectedPlan?.planDetails?.default_price,
+          subscriptionDescription: selectedPlan?.planDetails?.name,
+          coupon: validCoupon?.couponId,
+          isDefaultPayment: true,
+          amount:amount
+        }),
+      }
+    );
 
     if (result.ok) {
       const { subscriptionId } = await result.json();
@@ -170,7 +179,10 @@ const SubscriptionForm = ({
               <div
                 role="button"
                 className="text-danger"
-                onClick={() => { setShowCoupen(false); setError(""); }}
+                onClick={() => {
+                  setShowCoupen(false);
+                  setError("");
+                }}
               >
                 X
               </div>
@@ -182,7 +194,7 @@ const SubscriptionForm = ({
                   type="submit"
                   className=""
                   onClick={() => handleCoupen()}
-                // disabled={!stripe || !elements || processing}
+                  // disabled={!stripe || !elements || processing}
                 >
                   Apply Coupon
                 </Button>
@@ -210,7 +222,7 @@ const SubscriptionForm = ({
                     color="primary"
                     type="submit"
                     className="mt-5"
-                  // disabled={!stripe || !elements || processing}
+                    // disabled={!stripe || !elements || processing}
                   >
                     {loading ? "Processing" : "Subscribe Now"}
                   </Button>
@@ -228,7 +240,7 @@ const SubscriptionForm = ({
               type="submit"
               className="mt-5"
               onClick={handleSubmitWithDefaultPayment}
-            // disabled={!stripe || !elements || processing}
+              // disabled={!stripe || !elements || processing}
             >
               {loading ? "Processing" : "Pay with My Default Payment"}
             </Button>
@@ -238,13 +250,27 @@ const SubscriptionForm = ({
                 type="submit"
                 className="mt-5 btn btn-dark"
                 onClick={() => setChooseOtherPayment(true)}
-              // disabled={!stripe || !elements || processing}
+                // disabled={!stripe || !elements || processing}
               >
                 Choose Other
               </Button>
             )}
           </div>
         )}
+
+
+        <div className="mt-4">
+          {/* minimum amount  */}
+          <label htmlFor="coupon">Fee + Add Amount as credit we will charge now</label>
+          <div>
+            <input
+              type="number"
+              id="amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+        </div>
       </ModalBody>
       <ModalFooter>
         <Button color="secondary" onClick={toggle}>
