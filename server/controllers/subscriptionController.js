@@ -15,9 +15,17 @@ const subscriptionController = {
       coupon,
       isDefaultPayment,
       amount,
+      planId,
     } = req.body;
-
     try {
+      const prices = await stripe.prices.list({
+        type: "one_time",
+        product: planId,
+      });
+      const productFee = prices?.data?.find(
+        (price) => price.nickname === "fee"
+      )?.unit_amount;
+
       if (!isDefaultPayment) {
         await stripe.paymentMethods.attach(paymentMethodId, {
           customer: customerId,
@@ -29,36 +37,15 @@ const subscriptionController = {
             default_payment_method: paymentMethodId,
           },
         });
-
-        // res.json({ subscriptionId: subscription.id });
-
-        // const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntent?.id);
-
-        // console.log(confirmedPaymentIntent)
-
-        // const invoice = await stripe.invoices.create({
-        //   customer: customerId,
-        // });
-
-        // console.log(invoice)
       }
 
-
-      // const customerBalanceTransaction = await stripe.customers.createBalanceTransaction(
-      //   customerId,
-      //   {
-      //     amount: -500,
-      //     currency: 'cad',
-      //   }
-      // );
-
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount, // Replace with the actual amount in cents
+      await stripe.paymentIntents.create({
+        amount: productFee, // Replace with the actual amount in cents
         currency: "cad", // Replace with the actual currency
         customer: customerId,
         payment_method: paymentMethodId,
         confirm: true, // Ensure automatic confirmation
-        return_url: "https://your-website.com/success", // Replace with your actual success URL
+        return_url: "https://your-website.com/success",
       });
 
       const subscription = await stripe.subscriptions.create({
@@ -71,21 +58,8 @@ const subscriptionController = {
         coupon: coupon,
         default_payment_method: req.body.paymentMethodId,
         description: subscriptionDescription,
-        billing_cycle_anchor: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // Set to a future timestamp (e.g., 7 days from now)
       });
 
-
-      // const subscription = await stripe.subscriptions.create({
-      //   customer: customerId,
-      //   items: [
-      //     {
-      //       price: priceId,
-      //     },
-      //   ],
-      //   coupon: coupon,
-      //   default_payment_method: req.body.paymentMethodId,
-      //   description: subscriptionDescription,
-      // });
       res.json({ subscriptionId: subscription.id });
     } catch (error) {
       console.error("Error creating subscription:", error);
@@ -119,7 +93,15 @@ const subscriptionController = {
           cancel_at: current_period_end,
         });
 
-        // create a new subscription as requuested by the customer
+        // create a new subscription as requested by the customer
+        // const prices = await stripe.prices.list({
+        //   type: "one_time",
+        //   product: planId,
+        // });
+        // const productFee = prices?.data?.find(
+        //   (price) => price.nickname === "fee"
+        // )?.unit_amount;
+
         // it will start at the end of the current active subscription period
         const nextRequestedSubscription = await stripe.subscriptions.create({
           customer: customerId,
@@ -146,12 +128,13 @@ const subscriptionController = {
               {
                 id: subItemId,
                 deleted: true,
+                clear_usage: true,
               },
               {
                 price: newPriceId,
               },
             ],
-            proration_behavior: "always_invoice",
+            // proration_behavior: "always_invoice",
             description: description,
           }
         );

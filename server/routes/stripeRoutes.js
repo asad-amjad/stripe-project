@@ -17,7 +17,7 @@ router.post("/register-customer", customerController.register);
 
 //Products
 router.get("/product/:productId", productController.detail);
-// router.get("/products", productController.list);
+router.get("/products", productController.list);
 
 // Subscriptions
 router.post("/create-subscription", subscriptionController.create);

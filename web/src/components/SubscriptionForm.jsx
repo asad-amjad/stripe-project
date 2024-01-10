@@ -28,7 +28,7 @@ const SubscriptionForm = ({
 
   const customerId = localStorage.getItem("customerId"); // Get the customer ID
   const customerEmail = localStorage.getItem("customerEmail"); // Get the customer ID
-
+// console.log(selectedPlan?.planDetails.id)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -60,7 +60,8 @@ const SubscriptionForm = ({
             subscriptionDescription: selectedPlan?.planDetails?.name,
             coupon: validCoupon?.couponId,
             isDefaultPayment: false,
-            amount:amount
+            amount:amount,
+            planId: selectedPlan?.planDetails?.id
             // geZbHDVJ
           }),
         }

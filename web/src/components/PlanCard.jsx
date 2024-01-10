@@ -167,7 +167,8 @@ const PlanCard = ({
         <CardTitle tag="h5">{planDetails?.name}</CardTitle>
         <CardSubtitle className="mb-2 text-muted" tag="h6">
           ${priceDetail?.unit_amount / 100 || 0} /{" "}
-          {priceDetail?.recurring?.interval}
+          <span>usage per request</span>
+          {/* {priceDetail?.recurring?.interval} */}
         </CardSubtitle>
         <CardText>{planDetails?.description}</CardText>
 

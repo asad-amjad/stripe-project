@@ -6,21 +6,25 @@ let totalCost = 0;
 const usageRecordMiddleware = async (req, res, next) => {
   const customerId = req.params.customerId;
   try {
-    // Fecthing active subscription of customer
-
     // Increment call count
     callCount++;
 
-    function calculatePrice() {
-      // For simplicity, Fixed price of $0.5 per call
-      return 0.5;
-    }
+    // Price per call
+    const price = 0.5;
 
-    // Calculate price based on some logic (you can customize this)
-    const price = calculatePrice();
-
-    // Increment total cost
+    // Increment total price
     totalCost += price;
+
+    // Product: Get from DB
+
+    // const prices = await stripe.prices.list({
+    //   type: "one_time",
+    //   product: planId,
+    // });
+    // const productFee = prices?.data?.find(
+    //   (price) => price.nickname === "fee"
+    // )?.unit_amount;
+
 
     if (totalCost > 5) {
       // For Getting subscription item id

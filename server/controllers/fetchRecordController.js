@@ -25,7 +25,7 @@ let usersData = [
 
 const fetchRecordController = {
   fetchRecord: async (req, res) => {
-    console.log(req.body);
+    // console.log(req.body);
     res.json({ data: usersData, usage: req.body });
   },
 };
