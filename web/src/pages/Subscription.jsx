@@ -18,6 +18,7 @@ function Subscription() {
 
   const [activeSubscription, setActiveSubscription] = useState({});
   const [inQueueSubscription, setInQueueSubscription] = useState({});
+  const [usage, setUsage] = useState({});
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
   const customerId = localStorage.getItem("customerId");
 
@@ -33,7 +34,6 @@ function Subscription() {
     });
   };
 
-
   const fetchAllProducts = () => {
     fetch(`http://localhost:4000/stripe/products`, {
       method: "GET",
@@ -42,11 +42,10 @@ function Subscription() {
       },
     }).then(async (r) => {
       const aa = await r.json();
-      console.log(aa)
+      console.log(aa);
       // setSubscriptionPlans(plans);
     });
   };
-
 
   const fetchMyActiveSubscriptions = () => {
     fetch(`http://localhost:4000/stripe/subscriptions-list/${customerId}`, {
@@ -75,7 +74,6 @@ function Subscription() {
     });
   };
 
-
   const fetchRecord = () => {
     fetch(`http://localhost:4000/stripe/fetch-record/${customerId}`, {
       method: "GET",
@@ -83,8 +81,8 @@ function Subscription() {
         "Content-Type": "application/json",
       },
     }).then(async (r) => {
-      const defaultPaymentMethod = await r.json();
-      console.log('sa', defaultPaymentMethod)
+      const { data, usage } = await r.json();
+      setUsage(usage);
       // setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
@@ -97,7 +95,7 @@ function Subscription() {
       },
     }).then(async (r) => {
       const aa = await r.json();
-      console.log('sa', aa)
+      console.log("sa", aa);
       // setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
@@ -111,18 +109,18 @@ function Subscription() {
     setSelectedPlan(e);
   };
 
-  // useEffect(() => {
-    // fetchAllProducts();
-  // }, []);
+  useEffect(() => {
+    fetchPlanDetails();
+  }, []);
 
   useEffect(() => {
     if (!localStorage.getItem("customerId")) {
       setLoginModal(true);
     } else {
       fetchPlanDetails();
-      fetchInvoice()
+      // fetchInvoice()
       fetchMyActiveSubscriptions();
-      fetchMyDefaultPaymentMethod();
+      // fetchMyDefaultPaymentMethod();
     }
   }, [localStorage.getItem("customerId")]);
 
@@ -183,7 +181,29 @@ function Subscription() {
           </div>
         </>
       </div>
-      <p onClick={()=>fetchRecord()}>Fectch API</p>
+
+      <div className="d-flex justify-content-center flex-column">
+        {Object.keys(usage).length > 0 && (
+          <>
+            For db record
+            {usage && (
+              <p>
+                Used Amount : <strong>{usage.used_amount}</strong>
+              </p>
+            )}
+            {usage && (
+              <p>
+                Used call count for db: <strong>{usage.call_count}</strong>
+              </p>
+            )}
+          </>
+        )}
+        <div>
+          <button style={{ width: "250px" }} onClick={() => fetchRecord()}>
+            Fectch API
+          </button>
+        </div>
+      </div>
       {Object.keys(selectedPlan).length > 0 && (
         <Elements stripe={stripePromise}>
           <SubscriptionForm

@@ -14,9 +14,18 @@ const subscriptionController = {
       subscriptionDescription,
       coupon,
       isDefaultPayment,
+      amount,
+      planId,
     } = req.body;
-
     try {
+      const prices = await stripe.prices.list({
+        type: "one_time",
+        product: planId,
+      });
+      const productFee = prices?.data?.find(
+        (price) => price.nickname === "fee"
+      )?.unit_amount;
+
       if (!isDefaultPayment) {
         await stripe.paymentMethods.attach(paymentMethodId, {
           customer: customerId,
@@ -30,6 +39,15 @@ const subscriptionController = {
         });
       }
 
+      await stripe.paymentIntents.create({
+        amount: productFee, // Replace with the actual amount in cents
+        currency: "cad", // Replace with the actual currency
+        customer: customerId,
+        payment_method: paymentMethodId,
+        confirm: true, // Ensure automatic confirmation
+        return_url: "https://your-website.com/success",
+      });
+
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [
@@ -41,6 +59,7 @@ const subscriptionController = {
         default_payment_method: req.body.paymentMethodId,
         description: subscriptionDescription,
       });
+
       res.json({ subscriptionId: subscription.id });
     } catch (error) {
       console.error("Error creating subscription:", error);
@@ -74,7 +93,15 @@ const subscriptionController = {
           cancel_at: current_period_end,
         });
 
-        // create a new subscription as requuested by the customer
+        // create a new subscription as requested by the customer
+        // const prices = await stripe.prices.list({
+        //   type: "one_time",
+        //   product: planId,
+        // });
+        // const productFee = prices?.data?.find(
+        //   (price) => price.nickname === "fee"
+        // )?.unit_amount;
+
         // it will start at the end of the current active subscription period
         const nextRequestedSubscription = await stripe.subscriptions.create({
           customer: customerId,
@@ -101,12 +128,13 @@ const subscriptionController = {
               {
                 id: subItemId,
                 deleted: true,
+                clear_usage: true,
               },
               {
                 price: newPriceId,
               },
             ],
-            proration_behavior: "always_invoice",
+            // proration_behavior: "always_invoice",
             description: description,
           }
         );

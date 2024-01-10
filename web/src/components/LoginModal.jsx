@@ -4,8 +4,8 @@ import axios from "axios";
 
 // Create customer on stripe Modal
 function LoginModal({ loginModal, setLoginModal }) {
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [email, setEmail] = useState("a@gmail.com");
+  const [name, setName] = useState("aa");
 
   const handleCreateCustomer = async () => {
     try {
