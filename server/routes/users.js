@@ -10,13 +10,14 @@ const validateLoginInput = require("../validation/login");
 
 // Load User model
 const User = require("../models/User");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 // @route POST api/users/register
 // @desc Register user
 // @access Public
 router.post("/register", (req, res) => {
   // Form validation
-  cons
+  
   const { errors, isValid } = validateRegisterInput(req.body);
 
   // Check validation
@@ -91,7 +92,7 @@ router.post("/login", (req, res) => {
           (err, token) => {
             res.json({
               success: true,
-              token: "Bearer " + token,
+              token: token,
             });
           }
         );
@@ -103,5 +104,15 @@ router.post("/login", (req, res) => {
     });
   });
 });
+
+
+router.get("/profile", authMiddleware, (req, res) => {
+  res.json({
+    id: req.user.id,
+    name: req.user.name,
+    email: req.user.email,
+  });
+});
+
 
 module.exports = router;

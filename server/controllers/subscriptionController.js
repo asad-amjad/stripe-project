@@ -1,4 +1,5 @@
 // const { separateSubscriptions } = require("../utils");
+const User = require("../models/User");
 const separateSubscriptions = require("../utils");
 
 require("dotenv").config({ path: "./.env" });
@@ -7,8 +8,9 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const subscriptionController = {
   // Create subscription + coupon
   create: async (req, res) => {
+    // console.log(req.user)
     const {
-      customerId,
+      // customerId,
       priceId,
       paymentMethodId,
       subscriptionDescription,
@@ -16,11 +18,41 @@ const subscriptionController = {
       isDefaultPayment,
       amount,
       planId,
+
+      defaultPriceId,
+      selectedItemId,
     } = req.body;
+    const { id } = req.user;
+    const user = await User.findOne({ _id: id });
+    // console.log(user);
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({ emailnotfound: "User not found" });
+    }
+
+    let customerId = user.stripeCustomerId; // Assuming you store the Stripe customer ID in the user object
+
+    // console.log(customerId)
+    if (!user.isRegisteredAtStripe || !user.stripeCustomerId) {
+      // If the user doesn't have a Stripe customer ID, register them
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+        description: "Registered from app",
+      });
+
+      // Update the user's Stripe customer ID in the database
+      user.isRegisteredAtStripe = true;
+      user.stripeCustomerId = customer.id;
+      await user.save();
+
+      customerId = customer.id;
+    }
+
     try {
       const prices = await stripe.prices.list({
         type: "one_time",
-        product: planId,
+        product: selectedItemId,
       });
       const productFee = prices?.data?.find(
         (price) => price.nickname === "fee"
@@ -52,7 +84,7 @@ const subscriptionController = {
         customer: customerId,
         items: [
           {
-            price: priceId,
+            price: defaultPriceId,
           },
         ],
         coupon: coupon,

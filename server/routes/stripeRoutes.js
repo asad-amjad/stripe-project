@@ -11,6 +11,7 @@ const transactionController = require("../controllers/transactionController");
 const invoiceController = require("../controllers/invoiceController");
 const fetchRecordController = require("../controllers/fetchRecordController");
 const usageRecordMiddleware = require("../middlewares/usageRecordMiddleware");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 // Customer
 router.post("/register-customer", customerController.register);
@@ -20,7 +21,7 @@ router.get("/product/:productId", productController.detail);
 router.get("/products", productController.list);
 
 // Subscriptions
-router.post("/create-subscription", subscriptionController.create);
+router.post("/create-subscription", authMiddleware, subscriptionController.create);
 router.post(
   "/update-subscription/:subscriptionId",
   subscriptionController.update
