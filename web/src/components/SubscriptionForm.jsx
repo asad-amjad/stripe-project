@@ -260,8 +260,8 @@ const SubscriptionForm = ({
         )}
 
 
-        <div className="mt-4">
           {/* minimum amount  */}
+        {/* <div className="mt-4">
           <label htmlFor="coupon">Fee + Add Amount as credit we will charge now</label>
           <div>
             <input
@@ -271,7 +271,7 @@ const SubscriptionForm = ({
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
-        </div>
+        </div> */}
       </ModalBody>
       <ModalFooter>
         <Button color="secondary" onClick={toggle}>

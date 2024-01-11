@@ -104,7 +104,8 @@ const subscriptionController = {
 
   update: async (req, res) => {
     const subscriptionId = req.params.subscriptionId;
-    const { subItemId, newPriceId, customerId, description } = req.body;
+    const { subItemId, newPriceId, customerId, description, newPlanId } =
+      req.body;
 
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
@@ -152,6 +153,46 @@ const subscriptionController = {
           data: nextRequestedSubscription,
         });
       } else {
+        // TODO DB + payment_method_id from ui:
+        const customer = await stripe.customers.retrieve(customerId);
+        const defaultPaymentMethodId =
+          customer.invoice_settings.default_payment_method;
+
+        // Paying susbcription fee
+        const prices = await stripe.prices.list({
+          type: "one_time",
+          product: newPlanId,
+        });
+        const productFee = prices?.data?.find(
+          (price) => price.nickname === "fee"
+        )?.unit_amount;
+
+        // Pay extra api charges before updating
+        // const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+        //   // customer: customerId,
+        //   subscription: subscriptionId,
+
+        // });
+
+        // Retrieve the upcoming invoice for the subscription
+        const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
+          subscription: subscriptionId,
+        });
+
+        // Upcoming invoice object
+        const extraUsedAmountAtPreviousPlan = upcomingInvoice?.amount_due; //cents
+
+        const totalAmountToPay = extraUsedAmountAtPreviousPlan + productFee;
+
+        await stripe.paymentIntents.create({
+          amount: totalAmountToPay, // Replace with the actual amount in cents
+          currency: upcomingInvoice?.currency, // Replace with the actual currency
+          customer: customerId,
+          payment_method: defaultPaymentMethodId,
+          confirm: true,
+          return_url: "https://your-website.com/success",
+        });
+
         // If it's an upgrade, proceed as before
         const updatedSubscription = await stripe.subscriptions.update(
           subscriptionId,
