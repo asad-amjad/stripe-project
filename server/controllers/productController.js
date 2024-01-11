@@ -37,10 +37,16 @@ const productController = {
       }
 
       if (product) {
-        const price = await stripe.prices.retrieve(product.default_price);
-        product.extended_price_details = price; //Send price details
-      }
+        // const price = await stripe.prices.retrieve(product.default_price);
+        const allPrices = await getAllProductPrice(product);
+        const default_price = allPrices?.find((k) => {
+          return k.id === product.default_price;
+        });
 
+        product.extended_price_details = default_price; //Send price details
+        product.allPrices= allPrices
+        
+      }
       res.json({ product });
     } catch (error) {
       console.error("Error retrieving product details:", error);
