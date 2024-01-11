@@ -21,7 +21,7 @@ const PlanCard = ({
   handleUpdatePlan,
   inQueueSubscription,
   shouldUpdateEnable,
-  disableActiveBtns
+  disableActiveBtns,
 }) => {
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -139,20 +139,23 @@ const PlanCard = ({
         <span style={{ fontSize: '12px' }}>canceled_at: {convertTimestampToReadable(activeSubscription?.canceled_at)}</span>
       </div> */}
 
-
-      {isActive &&
+      {isActive && (
         <div className="text-success mt-1">
-          <span style={{ fontSize: '12px' }}>Cancel At: {convertTimestampToReadable(activeSubscription?.cancel_at)}</span>
+          <span style={{ fontSize: "12px" }}>
+            Cancel At:{" "}
+            {convertTimestampToReadable(activeSubscription?.cancel_at)}
+          </span>
         </div>
-      }
+      )}
 
-      {isActiveInQueue &&
+      {isActiveInQueue && (
         <div className="text-success mt-1">
-          <span style={{ fontSize: '12px' }}>Start date: {convertTimestampToReadable(inQueueSubscription?.trial_end)}</span>
+          <span style={{ fontSize: "12px" }}>
+            Start date:{" "}
+            {convertTimestampToReadable(inQueueSubscription?.trial_end)}
+          </span>
         </div>
-      }
-
-
+      )}
 
       {/* console.log(activeSubscription?.canceled_at)
   console.log(activeSubscription?.cancel_at) */}
@@ -165,6 +168,12 @@ const PlanCard = ({
       </div>
       <CardBody>
         <CardTitle tag="h5">{planDetails?.name}</CardTitle>
+        <CardTitle tag="h5">
+          {" "}
+          Fee: $
+          {planDetails?.allPrices?.find((price) => price.nickname === "fee")
+            ?.unit_amount / 100 || 0}
+        </CardTitle>
         <CardSubtitle className="mb-2 text-muted" tag="h6">
           ${priceDetail?.unit_amount / 100 || 0} /{" "}
           <span>usage per request</span>
@@ -196,12 +205,13 @@ const PlanCard = ({
                 onClick={() => {
                   shouldUpdateEnable
                     ? handlePlan({ planDetails, priceDetail })
-                    : handleUpdatePlan({ planDetails, newPriceDetail: priceDetail });
+                    : handleUpdatePlan({
+                        planDetails,
+                        newPriceDetail: priceDetail,
+                      });
                 }}
               >
-                {shouldUpdateEnable
-                  ? "Choose Plan"
-                  : "Upgrade Plan"}
+                {shouldUpdateEnable ? "Choose Plan" : "Upgrade Plan"}
               </Button>
             )}
 
