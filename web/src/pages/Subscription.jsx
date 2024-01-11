@@ -109,9 +109,9 @@ function Subscription() {
     setSelectedPlan(e);
   };
 
-  useEffect(() => {
-    fetchPlanDetails();
-  }, []);
+  // useEffect(() => {
+  //   fetchPlanDetails();
+  // }, []);
 
   useEffect(() => {
     if (!localStorage.getItem("customerId")) {
@@ -120,7 +120,7 @@ function Subscription() {
       fetchPlanDetails();
       // fetchInvoice()
       fetchMyActiveSubscriptions();
-      // fetchMyDefaultPaymentMethod();
+      fetchMyDefaultPaymentMethod();
     }
   }, [localStorage.getItem("customerId")]);
 
@@ -141,6 +141,7 @@ function Subscription() {
           newPriceId: newPriceId,
           customerId: customerId,
           description: `Description of ${planDetails?.name}`,
+          newPlanId: planDetails.id
         }),
       }
     ).then(async (r) => {
