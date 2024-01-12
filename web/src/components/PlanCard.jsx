@@ -28,7 +28,7 @@ const PlanCard = ({
   const [planDetails, setPlanDetails] = useState({});
   const [priceDetail, setPriceDetail] = useState({});
 
-
+// console.log(planDetails)
 
   useEffect(() => {
     if (planId) {
@@ -109,7 +109,13 @@ const PlanCard = ({
       // Handle error scenarios
     }
   };
-
+  const meteredFee = planDetails?.allPrices?.find(
+    (price) => price.recurring.usage_type === "metered"
+  );
+  const licensedFee = planDetails?.allPrices?.find(
+    (price) => price.recurring.usage_type === "licensed"
+  );
+// console.log(licensedFee)
 
   return (
     <Card
@@ -171,12 +177,11 @@ const PlanCard = ({
         <CardTitle tag="h5">
           {" "}
           Fee: $
-          {planDetails?.allPrices?.find((price) => price.nickname === "fee")
-            ?.unit_amount / 100 || 0}
+          {licensedFee?.unit_amount / 100 || 0}
         </CardTitle>
         <CardSubtitle className="mb-2 text-muted" tag="h6">
-          ${priceDetail?.unit_amount / 100 || 0} /{" "}
-          <span>usage per request</span>
+          ${meteredFee?.unit_amount / 100 || 0} /{" "} 
+          <span>usage per request after fee</span>
           {/* {priceDetail?.recurring?.interval} */}
         </CardSubtitle>
         <CardText>{planDetails?.description}</CardText>

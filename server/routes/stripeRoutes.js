@@ -41,7 +41,7 @@ router.post("/set-default-method", paymentMethodController.setDefault);
 router.post("/create-payment-intent", singlePaymentController.createIntent);
 
 // Transactions
-router.get("/fetch-record/:customerId", usageRecordMiddleware, fetchRecordController.fetchRecord);
+router.post("/fetch-record", usageRecordMiddleware, fetchRecordController.fetchRecord);
 router.get("/invoice/:customerId", invoiceController.list);
 
 module.exports = router;

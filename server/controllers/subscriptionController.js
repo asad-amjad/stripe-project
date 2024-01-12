@@ -1,5 +1,5 @@
-// const { separateSubscriptions } = require("../utils");
-const separateSubscriptions = require("../utils");
+const { getIdsByUsageType, separateSubscriptions } = require("../utils");
+// const separateSubscriptions = require("../utils");
 
 require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -18,14 +18,6 @@ const subscriptionController = {
       planId,
     } = req.body;
     try {
-      const prices = await stripe.prices.list({
-        type: "one_time",
-        product: planId,
-      });
-      const productFee = prices?.data?.find(
-        (price) => price.nickname === "fee"
-      )?.unit_amount;
-
       if (!isDefaultPayment) {
         await stripe.paymentMethods.attach(paymentMethodId, {
           customer: customerId,
@@ -39,20 +31,25 @@ const subscriptionController = {
         });
       }
 
-      await stripe.paymentIntents.create({
-        amount: productFee, // Replace with the actual amount in cents
-        currency: "cad", // Replace with the actual currency
-        customer: customerId,
-        payment_method: paymentMethodId,
-        confirm: true, // Ensure automatic confirmation
-        return_url: "https://your-website.com/success",
+      const prices = await stripe.prices.list({
+        product: planId,
       });
+
+      const meteredFee = prices?.data?.find(
+        (price) => price.recurring.usage_type === "metered"
+      );
+      const licensedFee = prices?.data?.find(
+        (price) => price.recurring.usage_type === "licensed"
+      );
 
       const subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [
           {
-            price: priceId,
+            price: meteredFee?.id,
+          },
+          {
+            price: licensedFee?.id,
           },
         ],
         coupon: coupon,
@@ -72,7 +69,7 @@ const subscriptionController = {
 
   update: async (req, res) => {
     const subscriptionId = req.params.subscriptionId;
-    const { subItemId, newPriceId, customerId, description, newPlanId } =
+    const { subItemId, newPriceId, customerId, description, newPlanId, planFee } =
       req.body;
 
     try {
@@ -126,14 +123,9 @@ const subscriptionController = {
         const defaultPaymentMethodId =
           customer.invoice_settings.default_payment_method;
 
-        // Paying susbcription fee
-        const prices = await stripe.prices.list({
-          type: "one_time",
-          product: newPlanId,
-        });
-        const productFee = prices?.data?.find(
-          (price) => price.nickname === "fee"
-        )?.unit_amount;
+        // const productFee = prices?.data?.find(
+        //   (price) => price.nickname === "fee"
+        // )?.unit_amount;
 
         // Pay extra api charges before updating
         // const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
@@ -143,39 +135,73 @@ const subscriptionController = {
         // });
 
         // Retrieve the upcoming invoice for the subscription
+
         const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
           subscription: subscriptionId,
         });
 
-        // Upcoming invoice object
-        const extraUsedAmountAtPreviousPlan = upcomingInvoice?.amount_due; //cents
+        // Calculate And Charge extra used amount if geater than actual plan price
+        
+        // const planFee = 1000; //Previous plan price example
+        if (upcomingInvoice?.amount_due > planFee) {
+          const extraUsedAmountAtPreviousPlan =
+            upcomingInvoice?.amount_due - planFee;
 
-        const totalAmountToPay = extraUsedAmountAtPreviousPlan + productFee;
+          await stripe.paymentIntents.create({
+            amount: extraUsedAmountAtPreviousPlan, // Replace with the actual amount in cents
+            currency: upcomingInvoice?.currency, // Replace with the actual currency
+            customer: customerId,
+            payment_method: defaultPaymentMethodId,
+            confirm: true,
+            description: "Extra used amount at previous plan",
+            return_url: "https://your-website.com/success",
+          });
+        }
 
-        await stripe.paymentIntents.create({
-          amount: totalAmountToPay, // Replace with the actual amount in cents
-          currency: upcomingInvoice?.currency, // Replace with the actual currency
-          customer: customerId,
-          payment_method: defaultPaymentMethodId,
-          confirm: true,
-          return_url: "https://your-website.com/success",
+        // Paying susbcription fee + activate usage subscription
+        const prices = await stripe.prices.list({
+          product: newPlanId,
         });
+
+        const meteredFee = prices?.data?.find(
+          (price) => price.recurring.usage_type === "metered"
+        );
+        const licensedFee = prices?.data?.find(
+          (price) => price.recurring.usage_type === "licensed"
+        );
+
+        const subscriptionItems = await stripe.subscriptionItems.list({
+          subscription: subscriptionId,
+        });
+
+        const meteredItem = getIdsByUsageType(subscriptionItems, "metered");
+        const licensedItem = getIdsByUsageType(subscriptionItems, "licensed");
 
         // If it's an upgrade, proceed as before
         const updatedSubscription = await stripe.subscriptions.update(
           subscriptionId,
           {
             items: [
+              // Clear previous plan
               {
-                id: subItemId,
+                id: meteredItem?.id,
                 deleted: true,
-                clear_usage: true,
+                clear_usage: true, // Clearing all usage
               },
               {
-                price: newPriceId,
+                id: licensedItem?.id,
+                deleted: true,
+              },
+
+              // New Price Ids Fee + Metered
+              {
+                price: meteredFee.id,
+              },
+              {
+                price: licensedFee.id,
               },
             ],
-            // proration_behavior: "always_invoice",
+            proration_behavior: "always_invoice",
             description: description,
           }
         );
@@ -218,6 +244,13 @@ const subscriptionController = {
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
       });
+
+      const activeSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+      });
+      // console.log(subscriptions)
+      // console.log(activeSubscriptions?.data[0])
 
       const separatedSubscriptions = separateSubscriptions(subscriptions?.data);
 

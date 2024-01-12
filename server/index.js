@@ -4,8 +4,8 @@ const bodyParser = require("body-parser");
 const passport = require("passport");
 const cors = require("cors");
 const path = require("path");
-const db = require("./config/keys").mongoURI;
-const {mongoURI} = require("./config/keys");
+// const db = require("./config/keys").mongoURI;
+// const {mongoURI} = require("./config/keys");
 
 // Routes
 const users = require("./routes/users");
@@ -21,13 +21,13 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // Connect to MongoDB
-mongoose
-  .connect(
-    mongoURI
-    // { useNewUrlParser: true, useUnifiedTopology: true }
-  )
-  .then(() => console.log("MongoDB successfully connected"))
-  .catch((err) => console.log(err));
+// mongoose
+//   .connect(
+//     mongoURI
+//     // { useNewUrlParser: true, useUnifiedTopology: true }
+//   )
+//   .then(() => console.log("MongoDB successfully connected"))
+//   .catch((err) => console.log(err));
 
 // Passport middleware
 app.use(passport.initialize());

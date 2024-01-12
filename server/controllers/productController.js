@@ -18,7 +18,6 @@ const getAllProductPrice = async (product) => {
       product: product.id,
       // limit: 3,
     });
-
     return prices?.data;
   } catch (error) {
     console.error("Error retrieving price:", error);
@@ -39,13 +38,25 @@ const productController = {
       if (product) {
         // const price = await stripe.prices.retrieve(product.default_price);
         const allPrices = await getAllProductPrice(product);
+        const meteredFee = allPrices.find(
+          (price) => price.recurring.usage_type === "metered"
+        );
+        const licensedFee = allPrices.find(
+          (price) => price.recurring.usage_type === "licensed"
+        );
+
+        // console.log(allPrices)
         const default_price = allPrices?.find((k) => {
           return k.id === product.default_price;
         });
 
-        product.extended_price_details = default_price; //Send price details
-        product.allPrices= allPrices
-        
+        // TO be removed
+        product.extended_price_details = default_price;
+        product.allPrices = allPrices;
+        // ==================
+
+        product.meteredFee = meteredFee;
+        product.licensedFee = licensedFee;
       }
       res.json({ product });
     } catch (error) {
@@ -67,11 +78,24 @@ const productController = {
       const productsWithPrices = await Promise.all(
         products.data.map(async (product) => {
           const allPrices = await getAllProductPrice(product);
+          const meteredFee = allPrices.find(
+            (price) => price.recurring.usage_type === "metered"
+          );
+          const licensedFee = allPrices.find(
+            (price) => price.recurring.usage_type === "licensed"
+          );
 
           const default_price = allPrices?.find((k) => {
             return k.id === product.default_price;
           });
 
+          // TO be removed
+          product.extended_price_details = default_price;
+          product.allPrices = allPrices;
+          // ==================
+
+          product.meteredFee = meteredFee;
+          product.licensedFee = licensedFee;
           return {
             ...product,
             extended_price_details: default_price,
