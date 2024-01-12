@@ -153,7 +153,7 @@ const subscriptionController = {
             customer: customerId,
             payment_method: defaultPaymentMethodId,
             confirm: true,
-            description: "Extra used amount at previous plan",
+            description: "Extra used charges at previous plan",
             return_url: "https://your-website.com/success",
           });
         }

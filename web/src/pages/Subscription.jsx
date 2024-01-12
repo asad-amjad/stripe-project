@@ -164,7 +164,7 @@ function Subscription() {
           subItemId: subItemId,
           newPriceId: newPriceId,
           customerId: customerId,
-          description: `Description of ${planDetails?.name}`,
+          description: `Fee: ${planDetails?.name}`,
           newPlanId: planDetails.id,
           planFee: planFee,
         }),
