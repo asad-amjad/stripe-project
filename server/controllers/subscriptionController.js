@@ -1,9 +1,6 @@
-// const { separateSubscriptions } = require("../utils");
 const User = require("../models/User");
-const separateSubscriptions = require("../utils");
 
 const { getIdsByUsageType, separateSubscriptions } = require("../utils");
-// const separateSubscriptions = require("../utils");
 
 require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
