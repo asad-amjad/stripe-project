@@ -69,17 +69,35 @@ const subscriptionController = {
 
   update: async (req, res) => {
     const subscriptionId = req.params.subscriptionId;
-    const { subItemId, newPriceId, customerId, description, newPlanId, planFee } =
-      req.body;
+    const {
+      subItemId,
+      newPriceId,
+      customerId,
+      description,
+      newPlanId,
+      planFee,
+    } = req.body;
 
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-      const currentPlanAmount = await subscription.items.data[0].price
-        .unit_amount;
-      const newPlanAmount = await stripe.prices
-        .retrieve(newPriceId)
-        .then((price) => price.unit_amount);
+      const subscriptionItems = await stripe.subscriptionItems.list({
+        subscription: subscriptionId,
+      });
+
+      const licensedItem = getIdsByUsageType(subscriptionItems, "licensed");
+
+      const prices = await stripe.prices.list({
+        product: newPlanId,
+      });
+
+      const newPlanAmount = prices?.data?.find(
+        (price) => price.recurring.usage_type === "licensed"
+      )?.unit_amount;
+
+      // console.log(newPlanAmount)
+
+      const currentPlanAmount = licensedItem?.price?.unit_amount;
 
       // Check if it's a downgrade
       const isDownGrade = currentPlanAmount > newPlanAmount;
@@ -91,21 +109,27 @@ const subscriptionController = {
           cancel_at: current_period_end,
         });
 
-        // create a new subscription as requested by the customer
-        // const prices = await stripe.prices.list({
-        //   type: "one_time",
-        //   product: planId,
-        // });
-        // const productFee = prices?.data?.find(
-        //   (price) => price.nickname === "fee"
-        // )?.unit_amount;
+        // Paying susbcription fee + activate usage subscription
+        const prices = await stripe.prices.list({
+          product: newPlanId,
+        });
+
+        const meteredFee = prices?.data?.find(
+          (price) => price.recurring.usage_type === "metered"
+        );
+        const licensedFee = prices?.data?.find(
+          (price) => price.recurring.usage_type === "licensed"
+        );
 
         // it will start at the end of the current active subscription period
         const nextRequestedSubscription = await stripe.subscriptions.create({
           customer: customerId,
           items: [
             {
-              price: newPriceId,
+              price: meteredFee?.id,
+            },
+            {
+              price: licensedFee?.id,
             },
           ],
           trial_end: current_period_end,
@@ -123,30 +147,16 @@ const subscriptionController = {
         const defaultPaymentMethodId =
           customer.invoice_settings.default_payment_method;
 
-        // const productFee = prices?.data?.find(
-        //   (price) => price.nickname === "fee"
-        // )?.unit_amount;
-
-        // Pay extra api charges before updating
-        // const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
-        //   // customer: customerId,
-        //   subscription: subscriptionId,
-
-        // });
-
         // Retrieve the upcoming invoice for the subscription
-
         const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
           subscription: subscriptionId,
         });
-
         // Calculate And Charge extra used amount if geater than actual plan price
-        
+
         // const planFee = 1000; //Previous plan price example
         if (upcomingInvoice?.amount_due > planFee) {
           const extraUsedAmountAtPreviousPlan =
             upcomingInvoice?.amount_due - planFee;
-
           await stripe.paymentIntents.create({
             amount: extraUsedAmountAtPreviousPlan, // Replace with the actual amount in cents
             currency: upcomingInvoice?.currency, // Replace with the actual currency
@@ -192,7 +202,6 @@ const subscriptionController = {
                 id: licensedItem?.id,
                 deleted: true,
               },
-
               // New Price Ids Fee + Metered
               {
                 price: meteredFee.id,
@@ -205,7 +214,6 @@ const subscriptionController = {
             description: description,
           }
         );
-
         res.status(200).json({
           message: "Upgrade subscription updated successfully",
           data: updatedSubscription,
@@ -221,7 +229,10 @@ const subscriptionController = {
   cancel: async (req, res) => {
     const { subscriptionId } = req.body;
     try {
-      await stripe.subscriptions.del(subscriptionId);
+      // await stripe.subscriptions.del(subscriptionId);
+      await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true,
+      });
 
       res.json({
         success: true,
@@ -245,10 +256,10 @@ const subscriptionController = {
         customer: customerId,
       });
 
-      const activeSubscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "active",
-      });
+      // const activeSubscriptions = await stripe.subscriptions.list({
+      //   customer: customerId,
+      //   status: "active",
+      // });
       // console.log(subscriptions)
       // console.log(activeSubscriptions?.data[0])
 
