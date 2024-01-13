@@ -22,6 +22,12 @@ function Subscription() {
   const stripePromise = api.getPublicStripeKey().then((key) => loadStripe(key));
   const customerId = localStorage.getItem("customerId");
 
+  const getIdsByUsageType = (subscriptionItems, targetUsageType) => {
+    return subscriptionItems?.items.data
+      ?.filter((item) => item.plan && item.plan.usage_type === targetUsageType)
+      .find((item) => item);
+  };
+
   const fetchPlanDetails = () => {
     fetch(`http://localhost:4000/home-plans`, {
       method: "GET",
@@ -74,18 +80,31 @@ function Subscription() {
     });
   };
 
+  // const licensedFee = planDetails?.allPrices?.find(
+  //   (price) => price.recurring.usage_type === "licensed"
+  // );
   const fetchRecord = () => {
-    fetch(`http://localhost:4000/stripe/fetch-record/${customerId}`, {
-      method: "GET",
+    const licensedItem = getIdsByUsageType(activeSubscription, "licensed");
+    const planFee = licensedItem?.price?.unit_amount;
+    fetch(`http://localhost:4000/stripe/fetch-record`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        subscriptionId: activeSubscription?.id,
+        customerId: customerId,
+        planFee: planFee,
+      }),
     }).then(async (r) => {
       const { data, usage } = await r.json();
       setUsage(usage);
       // setDefaultPaymentMethod(defaultPaymentMethod);
     });
   };
+
+  // Example usage with a new parameter value
+  // fetchRecord('yourNewParameterValue');
 
   const fetchInvoice = () => {
     fetch(`http://localhost:4000/stripe/invoice/${customerId}`, {
@@ -125,8 +144,13 @@ function Subscription() {
   }, [localStorage.getItem("customerId")]);
 
   const handleUpdatePlan = ({ planDetails, newPriceDetail }) => {
+    const licensedItem = getIdsByUsageType(activeSubscription, "licensed");
+    const planFee = licensedItem?.price?.unit_amount;
+
     const subscriptionId = activeSubscription.id;
     const subItemId = activeSubscription?.items.data[0]?.id;
+
+    // activeSubscription?.items?.data[0]?.plan
     const newPriceId = newPriceDetail.id;
     fetch(
       `http://localhost:4000/stripe/update-subscription/${subscriptionId}`,
@@ -140,8 +164,9 @@ function Subscription() {
           subItemId: subItemId,
           newPriceId: newPriceId,
           customerId: customerId,
-          description: `Description of ${planDetails?.name}`,
-          newPlanId: planDetails.id
+          description: `Fee: ${planDetails?.name}`,
+          newPlanId: planDetails.id,
+          planFee: planFee,
         }),
       }
     ).then(async (r) => {
@@ -149,6 +174,10 @@ function Subscription() {
       fetchMyActiveSubscriptions();
     });
   };
+
+  // const meteredItem = getIdsByUsageType(activeSubscription, "metered");
+  // const licensedItem = getIdsByUsageType(activeSubscription, "licensed");
+  // console.log(licensedItem?.price?.unit_amount)
 
   return (
     <div className="App">
@@ -169,7 +198,10 @@ function Subscription() {
                     isActiveInQueue={inQueueSubscription?.plan?.product?.includes(
                       k
                     )}
-                    isActive={activeSubscription?.plan?.product?.includes(k)}
+                    // Filter todo:
+                    isActive={activeSubscription?.items?.data[0]?.plan?.product?.includes(
+                      k
+                    )}
                     // shouldUpdateEnable={isObjectEmpty(activeSubscription)}
                     shouldUpdateEnable={isObjectEmpty(activeSubscription)}
                     activeSubscription={activeSubscription}
@@ -192,11 +224,11 @@ function Subscription() {
                 Used Amount : <strong>{usage.used_amount}</strong>
               </p>
             )}
-            {usage && (
+            {/* {usage && (
               <p>
                 Used call count for db: <strong>{usage.call_count}</strong>
               </p>
-            )}
+            )} */}
           </>
         )}
         <div>

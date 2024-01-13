@@ -1,51 +1,42 @@
+const { getIdsByUsageType } = require("../utils");
+
 require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 let callCount = 0;
-let totalCost = 0;
+let extra_used_amount = 0;
 const usageRecordMiddleware = async (req, res, next) => {
-  const customerId = req.params.customerId;
+  const { subscriptionId, planFee } = req.body;
   try {
     // Increment call count
     callCount++;
 
     // Price per call
-    const price = 0.5;
+    const price = 2;
 
     // Increment total price
-    totalCost += price;
+    extra_used_amount += price;
 
-    // Product: Get from DB
+    // Need from db
+    // const currentPlanFee = 5;
+    const currentPlanFee = planFee / 100; //cents to dollar
 
-    // const prices = await stripe.prices.list({
-    //   type: "one_time",
-    //   product: planId,
-    // });
-    // const productFee = prices?.data?.find(
-    //   (price) => price.nickname === "fee"
-    // )?.unit_amount;
+    // Get Usage from db
+    if (extra_used_amount > currentPlanFee) {
+      // DB: Get associated subscription Items id from db
+      // Need metered item id for creating usage record
 
-
-    if (totalCost > 5) {
-      // For Getting subscription item id
-      const subscriptions = await stripe.subscriptions.list({
-        limit: 1,
-        customer: customerId,
-        status: "active",
+      const subscriptionItems = await stripe.subscriptionItems.list({
+        subscription: subscriptionId,
       });
 
-      // Todo: Db
-      let subItem = null; // Subscription item id
-      subscriptions?.data?.forEach((subscription) => {
-        subscription.items.data.forEach((item) => {
-          subItem = item;
-        });
-      });
+      const meteredItem = getIdsByUsageType(subscriptionItems, "metered");
+      // const licensedItem = getIdsByUsageType(subscriptionItems, "licensed");
 
-      // Charging
-      if (subItem) {
+      // usage record effect in next invoice
+      if (meteredItem?.id) {
         const usageRecord = await stripe.subscriptionItems.createUsageRecord(
-          subItem?.id,
+          meteredItem?.id,
           {
             quantity: 1,
           }
@@ -53,11 +44,8 @@ const usageRecordMiddleware = async (req, res, next) => {
         req.usageRecord = usageRecord;
       }
     }
-    req.body.call_count = callCount; // Attach usage record to request object
-    req.body.used_amount = totalCost;
-    // console.log(
-    //   `Call #${callCount} - Price: $${price} - Total Cost: $${totalCost}`
-    // );
+    req.body.used_amount = extra_used_amount;
+
     next(); // Continue to the next route handler
   } catch (error) {
     console.error("Error creating subscription:", error);

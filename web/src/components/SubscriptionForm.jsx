@@ -28,7 +28,7 @@ const SubscriptionForm = ({
 
   const customerId = localStorage.getItem("customerId"); // Get the customer ID
   const customerEmail = localStorage.getItem("customerEmail"); // Get the customer ID
-// console.log(selectedPlan?.planDetails.id)
+  // console.log(selectedPlan?.planDetails?.id  )
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -57,11 +57,11 @@ const SubscriptionForm = ({
             customerId: customerId,
             paymentMethodId: paymentMethod.id,
             priceId: selectedPlan?.planDetails?.default_price,
-            subscriptionDescription: selectedPlan?.planDetails?.name,
+            subscriptionDescription: `Fee ${selectedPlan?.planDetails?.name}`,
             coupon: validCoupon?.couponId,
             isDefaultPayment: false,
-            amount:amount,
-            planId: selectedPlan?.planDetails?.id
+            amount: amount,
+            planId: selectedPlan?.planDetails?.id,
             // geZbHDVJ
           }),
         }
@@ -96,10 +96,12 @@ const SubscriptionForm = ({
           customerId: customerId,
           paymentMethodId: defaultPaymentMethod.id,
           priceId: selectedPlan?.planDetails?.default_price,
-          subscriptionDescription: selectedPlan?.planDetails?.name,
+          subscriptionDescription: `Fee ${selectedPlan?.planDetails?.name}`,
+
+          planId: selectedPlan?.planDetails?.id,
           coupon: validCoupon?.couponId,
           isDefaultPayment: true,
-          amount:amount
+          amount: amount,
         }),
       }
     );
@@ -258,9 +260,7 @@ const SubscriptionForm = ({
             )}
           </div>
         )}
-
-
-          {/* minimum amount  */}
+        {/* minimum amount  */}
         {/* <div className="mt-4">
           <label htmlFor="coupon">Fee + Add Amount as credit we will charge now</label>
           <div>
