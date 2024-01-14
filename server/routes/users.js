@@ -17,7 +17,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 // @access Public
 router.post("/register", (req, res) => {
   // Form validation
-  
+
   const { errors, isValid } = validateRegisterInput(req.body);
 
   // Check validation
@@ -105,7 +105,6 @@ router.post("/login", (req, res) => {
   });
 });
 
-
 router.get("/profile", authMiddleware, (req, res) => {
   res.json({
     id: req.user.id,
@@ -113,6 +112,5 @@ router.get("/profile", authMiddleware, (req, res) => {
     email: req.user.email,
   });
 });
-
 
 module.exports = router;

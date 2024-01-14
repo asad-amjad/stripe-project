@@ -1,6 +1,9 @@
 const User = require("../models/User");
 
 const { getIdsByUsageType, separateSubscriptions } = require("../utils");
+const stripeHelper = require("../Helpers/stripeHelper");
+
+const Subscription = require("../models/subscription"); // Import the Subscription model
 
 require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -8,32 +11,22 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const subscriptionController = {
   // Create subscription + coupon
   create: async (req, res) => {
-    // console.log(req.user)
     const {
-      // customerId,
-      priceId,
       paymentMethodId,
+      selectedProductId,
       subscriptionDescription,
+
       coupon,
       isDefaultPayment,
-      amount,
       planId,
-
-      defaultPriceId,
-      selectedItemId,
     } = req.body;
+
     const { id } = req.user;
     const user = await User.findOne({ _id: id });
-    // console.log(user);
-    // Check if user exists
-    if (!user) {
-      return res.status(404).json({ emailnotfound: "User not found" });
-    }
 
     let customerId = user.stripeCustomerId; // Assuming you store the Stripe customer ID in the user object
 
-    // console.log(customerId)
-    if (!user.isRegisteredAtStripe || !user.stripeCustomerId) {
+    if (!user.isRegisteredAtStripe) {
       // If the user doesn't have a Stripe customer ID, register them
       const customer = await stripe.customers.create({
         email: user.email,
@@ -41,26 +34,16 @@ const subscriptionController = {
         description: "Registered from app",
       });
 
-      // Update the user's Stripe customer ID in the database
+      // Update the user's Stripe customer ID in the db
       user.isRegisteredAtStripe = true;
       user.stripeCustomerId = customer.id;
       await user.save();
-
       customerId = customer.id;
     }
 
     try {
-
-      // const prices = await stripe.prices.list({
-      //   type: "one_time",
-      //   product: selectedItemId,
-      // });
-      // const productFee = prices?.data?.find(
-      //   (price) => price.nickname === "fee"
-      // )?.unit_amount;
-
-
       if (!isDefaultPayment) {
+        // Attaching method as defauld
         await stripe.paymentMethods.attach(paymentMethodId, {
           customer: customerId,
         });
@@ -72,16 +55,9 @@ const subscriptionController = {
           },
         });
       }
-
-      const prices = await stripe.prices.list({
-        product: planId,
-      });
-
-      const meteredFee = prices?.data?.find(
-        (price) => price.recurring.usage_type === "metered"
-      );
-      const licensedFee = prices?.data?.find(
-        (price) => price.recurring.usage_type === "licensed"
+      // getting Price Id
+      const { meteredFee, licensedFee } = await stripeHelper.getPrices(
+        selectedProductId
       );
 
       const subscription = await stripe.subscriptions.create({
@@ -98,7 +74,19 @@ const subscriptionController = {
         default_payment_method: req.body.paymentMethodId,
         description: subscriptionDescription,
       });
+      console.log(selectedProductId)
+      // Save subscription information in the database
+      const newSubscription = await new Subscription({
+        userId: user._id,
+        stripeSubscriptionId: subscription.id,
+        productId: selectedProductId,
+        meteredFee: meteredFee,
+        licensedFee: licensedFee,
+        // coupon: coupon,
+        // Add other fields as needed
+      });
 
+      await newSubscription.save();
       res.json({ subscriptionId: subscription.id });
     } catch (error) {
       console.error("Error creating subscription:", error);
@@ -292,25 +280,16 @@ const subscriptionController = {
   },
 
   list: async (req, res) => {
-    const customerId = req.params.customerId;
+    const { id } = req.user;
+
     try {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-      });
-
-      // const activeSubscriptions = await stripe.subscriptions.list({
-      //   customer: customerId,
-      //   status: "active",
-      // });
-      // console.log(subscriptions)
-      // console.log(activeSubscriptions?.data[0])
-
-      const separatedSubscriptions = separateSubscriptions(subscriptions?.data);
-
-      res.json({
-        active: separatedSubscriptions.active || {},
-        inQueue: separatedSubscriptions.inQueue || {},
-      });
+      Subscription.find({ userId: id })
+        .then((subscriptions) => {
+          res.json(subscriptions);
+        })
+        .catch((error) => {
+          console.error("Error fetching subscriptions:", error);
+        });
     } catch (error) {
       console.error("Error retrieving active subscriptions:", error.message);
       res.status(500).json({ error: "Internal Server Error" });

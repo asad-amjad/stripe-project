@@ -1,7 +1,7 @@
 // routes/stripeRoutes.js
 const express = require("express");
 const router = express.Router();
-const customerController = require("../controllers/customerController");
+// const customerController = require("../controllers/customerController");
 const subscriptionController = require("../controllers/subscriptionController");
 const couponController = require("../controllers/couponController");
 const productController = require("../controllers/productController");
@@ -14,10 +14,10 @@ const usageRecordMiddleware = require("../middlewares/usageRecordMiddleware");
 const authMiddleware = require("../middlewares/authMiddleware");
 
 // Customer
-router.post("/register-customer", customerController.register);
+// router.post("/register-customer", customerController.register);
 
 //Products
-router.get("/product/:productId", productController.detail);
+// router.get("/product/:productId", productController.detail);
 router.get("/products", productController.list);
 
 // Subscriptions
@@ -28,7 +28,7 @@ router.post(
 );
 
 router.post("/cancel-subscription", subscriptionController.cancel);
-router.get("/subscriptions-list/:customerId", subscriptionController.list);
+router.get("/subscriptions-list",authMiddleware, subscriptionController.list);
 
 // Coupon
 router.post("/validate-coupon", couponController.validation);
