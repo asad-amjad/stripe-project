@@ -53,6 +53,7 @@ const subscriptionController = {
           },
         });
       }
+
       // getting Price Id
       const { meteredFee, licensedFee } = await stripeHelper.getPrices(
         selectedProductId
@@ -78,8 +79,6 @@ const subscriptionController = {
         userId: user._id,
         stripeSubscriptionId: subscription.id,
         productId: selectedProductId,
-        meteredFee: meteredFee,
-        licensedFee: licensedFee,
         status: subscription.status,
         items: subscription.items?.data,
         currentPeriodStart: subscription.current_period_start, // Convert UNIX timestamp to JavaScript Date
@@ -104,29 +103,29 @@ const subscriptionController = {
     const { newSelectedPlanId } = req.body;
     const { id, stripeCustomerId } = req.user;
     try {
-      const { meteredFee: newMeteredFee, licensedFee: newLicensedFee } =
-        await stripeHelper.getPrices(newSelectedPlanId);
+      const { meteredFee, licensedFee } = await stripeHelper.getPrices(
+        newSelectedPlanId
+      );
 
       const subscription = await Subscription.findOne({ userId: id });
 
-      const currentPlanAmount = subscription?.licensedFee?.unit_amount;
-      const newPlanAmount = newLicensedFee?.unit_amount;
+      const meteredItem = stripeHelper.subscriptionByUsageType(
+        subscription,
+        "metered"
+      );
+      const licensedItem = stripeHelper.subscriptionByUsageType(
+        subscription,
+        "licensed"
+      );
+      const currentPlanAmount = licensedItem?.price?.unit_amount;
+      const newPlanAmount = licensedFee?.unit_amount;
 
       // // Check if it's a downgrade
       const isDownGrade = currentPlanAmount > newPlanAmount;
-
       if (isDownGrade) {
+        console.log("das");
         // Handle Downgrade
       } else {
-        const meteredItem = stripeHelper.subscriptionByUsageType(
-          subscription,
-          "metered"
-        );
-        const licensedItem = stripeHelper.subscriptionByUsageType(
-          subscription,
-          "licensed"
-        );
-
         // If it's an upgrade, proceed as before
         const updatedSubscription = await stripe.subscriptions.update(
           subscription?.stripeSubscriptionId,
@@ -144,10 +143,10 @@ const subscriptionController = {
               },
               // New Price Ids Fee + Metered
               {
-                price: newMeteredFee.id,
+                price: meteredFee.id,
               },
               {
-                price: newLicensedFee.id,
+                price: licensedFee.id,
               },
             ],
             proration_behavior: "always_invoice",
@@ -162,8 +161,6 @@ const subscriptionController = {
             $set: {
               stripeSubscriptionId: updatedSubscription.id,
               productId: newSelectedPlanId,
-              licensedFee: newLicensedFee,
-              meteredFee: newMeteredFee,
               status: updatedSubscription.status,
               items: updatedSubscription.items?.data,
               currentPeriodStart: updatedSubscription.current_period_start,
