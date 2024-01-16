@@ -12,12 +12,35 @@ const validateLoginInput = require("../validation/login");
 const User = require("../models/User");
 const authMiddleware = require("../middlewares/authMiddleware");
 
+// Function to generate JWT token and send response
+function generateTokenAndSendResponse(user, res) {
+  // Create JWT Payload
+  const payload = {
+    id: user.id,
+    name: user.name,
+  };
+
+  // Sign token
+  jwt.sign(
+    payload,
+    keys.secretOrKey,
+    {
+      expiresIn: 31556926, // 1 year in seconds
+    },
+    (err, token) => {
+      res.json({
+        success: true,
+        token: token,
+      });
+    }
+  );
+}
+
 // @route POST api/users/register
 // @desc Register user
 // @access Public
 router.post("/register", (req, res) => {
   // Form validation
-
   const { errors, isValid } = validateRegisterInput(req.body);
 
   // Check validation
@@ -42,7 +65,7 @@ router.post("/register", (req, res) => {
           newUser.password = hash;
           newUser
             .save()
-            .then((user) => res.json(user))
+            .then((user) => generateTokenAndSendResponse(user, res))
             .catch((err) => console.log(err));
         });
       });
@@ -76,26 +99,7 @@ router.post("/login", (req, res) => {
     bcrypt.compare(password, user.password).then((isMatch) => {
       if (isMatch) {
         // User matched
-        // Create JWT Payload
-        const payload = {
-          id: user.id,
-          name: user.name,
-        };
-
-        // Sign token
-        jwt.sign(
-          payload,
-          keys.secretOrKey,
-          {
-            expiresIn: 31556926, // 1 year in seconds
-          },
-          (err, token) => {
-            res.json({
-              success: true,
-              token: token,
-            });
-          }
-        );
+        generateTokenAndSendResponse(user, res);
       } else {
         return res
           .status(400)

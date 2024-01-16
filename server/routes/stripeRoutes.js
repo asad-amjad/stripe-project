@@ -23,7 +23,7 @@ router.get("/products", productController.list);
 // Subscriptions
 router.post("/create-subscription", authMiddleware, subscriptionController.create);
 router.post(
-  "/update-subscription/:subscriptionId",
+  "/update-subscription", authMiddleware,
   subscriptionController.update
 );
 
