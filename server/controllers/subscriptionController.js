@@ -14,17 +14,15 @@ const subscriptionController = {
     const {
       paymentMethodId,
       selectedProductId,
-      subscriptionDescription,
-
+      // subscriptionDescription,
       coupon,
       isDefaultPayment,
-      planId,
     } = req.body;
 
     const { id } = req.user;
     const user = await User.findOne({ _id: id });
 
-    let customerId = user.stripeCustomerId; // Assuming you store the Stripe customer ID in the user object
+    let customerId = user?.stripeCustomerId;
 
     if (!user.isRegisteredAtStripe) {
       // If the user doesn't have a Stripe customer ID, register them
@@ -36,7 +34,7 @@ const subscriptionController = {
 
       // Update the user's Stripe customer ID in the db
       user.isRegisteredAtStripe = true;
-      user.stripeCustomerId = customer.id;
+      user.stripeCustomerId = customer?.id;
       await user.save();
       customerId = customer.id;
     }
@@ -72,18 +70,23 @@ const subscriptionController = {
         ],
         coupon: coupon,
         default_payment_method: req.body.paymentMethodId,
-        description: subscriptionDescription,
+        // description: subscriptionDescription,
       });
-      console.log(selectedProductId);
-      // Save subscription information in the database
+
+      // Save subscription information in the db
       const newSubscription = await new Subscription({
         userId: user._id,
         stripeSubscriptionId: subscription.id,
         productId: selectedProductId,
         meteredFee: meteredFee,
         licensedFee: licensedFee,
-        // coupon: coupon,
-        // Add other fields as needed
+        status: subscription.status,
+        items: subscription.items?.data,
+        currentPeriodStart: subscription.current_period_start, // Convert UNIX timestamp to JavaScript Date
+        currentPeriodEnd: subscription.current_period_end,
+        created: subscription.created,
+        currency: subscription.currency,
+        paymentMethodId: req.body.paymentMethodId,
       });
 
       await newSubscription.save();
@@ -98,51 +101,86 @@ const subscriptionController = {
   },
 
   update: async (req, res) => {
-    // const subscriptionId = req.params.subscriptionId;
-    const {
-      // subItemId,
-      // newPriceId,
-      // customerId,
-      // description,
-      // newPlanId,
-      // planFee,
-      newSelectedPlanId,
-    } = req.body;
-    // console.log(req.user);
-    const { id } = req.user;
+    const { newSelectedPlanId } = req.body;
+    const { id, stripeCustomerId } = req.user;
     try {
       const { meteredFee: newMeteredFee, licensedFee: newLicensedFee } =
         await stripeHelper.getPrices(newSelectedPlanId);
 
       const subscription = await Subscription.findOne({ userId: id });
-      console.log(subscription);
-      // const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-      // const subscriptionItems = await stripe.subscriptionItems.list({
-      //   subscription: subscriptionId,
-      // });
-
-      // const licensedItem = getIdsByUsageType(subscriptionItems, "licensed");
-
-      // const prices = await stripe.prices.list({
-      //   product: newSelectedPlanId,
-      // });
-
-      // const newPlanAmount = prices?.data?.find(
-      //   (price) => price.recurring.usage_type === "licensed"
-      // )?.unit_amount;
-
-      // console.log(newPlanAmount)
-
-      // const currentPlanAmount = licensedItem?.price?.unit_amount;
+      const currentPlanAmount = subscription?.licensedFee?.unit_amount;
+      const newPlanAmount = newLicensedFee?.unit_amount;
 
       // // Check if it's a downgrade
-      // const isDownGrade = currentPlanAmount > newPlanAmount;
+      const isDownGrade = currentPlanAmount > newPlanAmount;
 
-      // if (isDownGrade) {
-      // } else {
-      //   // TODO DB + payment_method_id from ui:
-      // }
+      if (isDownGrade) {
+        // Handle Downgrade
+      } else {
+        const meteredItem = stripeHelper.subscriptionByUsageType(
+          subscription,
+          "metered"
+        );
+        const licensedItem = stripeHelper.subscriptionByUsageType(
+          subscription,
+          "licensed"
+        );
+
+        // If it's an upgrade, proceed as before
+        const updatedSubscription = await stripe.subscriptions.update(
+          subscription?.stripeSubscriptionId,
+          {
+            items: [
+              // Clear previous plan
+              {
+                id: meteredItem?.id,
+                deleted: true,
+                clear_usage: true, // Clearing all usage
+              },
+              {
+                id: licensedItem?.id,
+                deleted: true,
+              },
+              // New Price Ids Fee + Metered
+              {
+                price: newMeteredFee.id,
+              },
+              {
+                price: newLicensedFee.id,
+              },
+            ],
+            proration_behavior: "always_invoice",
+            // description: description,
+          }
+        );
+
+        // Update the subscription details in the database if necessary
+        await Subscription.findOneAndUpdate(
+          { userId: id },
+          {
+            $set: {
+              stripeSubscriptionId: updatedSubscription.id,
+              productId: newSelectedPlanId,
+              licensedFee: newLicensedFee,
+              meteredFee: newMeteredFee,
+              status: updatedSubscription.status,
+              items: updatedSubscription.items?.data,
+              currentPeriodStart: updatedSubscription.current_period_start,
+              currentPeriodEnd: updatedSubscription.current_period_end,
+              created: updatedSubscription.created,
+              currency: updatedSubscription.currency,
+              paymentMethodId: "req.body.paymentMethodId",
+            },
+          },
+          { new: true }
+        );
+
+        res.status(200).json({
+          message: "Upgrade subscription updated successfully",
+          data: updatedSubscription,
+        });
+      }
     } catch (error) {
       console.error("Error updating subscription:", error.message);
       res.status(500).json({ error: "Internal Server Error" });

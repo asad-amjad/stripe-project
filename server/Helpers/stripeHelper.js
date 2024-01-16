@@ -19,8 +19,16 @@ const getPrices = async (planId) => {
       throw new Error("Failed to fetch prices. Please try again later.");
     }
   };
+
+  const subscriptionByUsageType = (subscription, targetUsageType) => {
+    return subscription.items
+      ?.filter((item) => item.plan && item.plan.usage_type === targetUsageType)
+      .find((item) => item);
+  };
+  
   
   module.exports = {
     getPrices,
+    subscriptionByUsageType
   };
   
