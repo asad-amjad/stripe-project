@@ -1,6 +1,6 @@
 const User = require("../models/User");
 
-const { getIdsByUsageType, separateSubscriptions } = require("../utils");
+// const { getIdsByUsageType, separateSubscriptions } = require("../utils");
 const stripeHelper = require("../Helpers/stripeHelper");
 
 const Subscription = require("../models/subscription"); // Import the Subscription model
@@ -77,6 +77,7 @@ const subscriptionController = {
       // Save subscription information in the db
       const newSubscription = await new Subscription({
         userId: user._id,
+        customer: subscription.customer,
         stripeSubscriptionId: subscription.id,
         productId: selectedProductId,
         status: subscription.status,
@@ -101,7 +102,8 @@ const subscriptionController = {
 
   update: async (req, res) => {
     const { newSelectedPlanId } = req.body;
-    const { id, stripeCustomerId } = req.user;
+    const { id } = req.user;
+
     try {
       const { meteredFee, licensedFee } = await stripeHelper.getPrices(
         newSelectedPlanId
@@ -123,7 +125,55 @@ const subscriptionController = {
       // // Check if it's a downgrade
       const isDownGrade = currentPlanAmount > newPlanAmount;
       if (isDownGrade) {
-        console.log("das");
+        const current_period_end = subscription?.current_period_end;
+
+        console.log('sad', subscription);
+        // Cancelling the current subscription
+        await stripe.subscriptions.update(subscription?.stripeSubscriptionId, {
+          // cancel_at: current_period_end,
+          cancel_at_period_end: true,
+        });
+
+        // it will start at the end of the current active subscription period
+        const nextRequestedSubscription = await stripe.subscriptions.create({
+          customer: subscription?.customer,
+          items: [
+            {
+              price: meteredFee?.id,
+            },
+            {
+              price: licensedFee?.id,
+            },
+          ],
+          trial_end: current_period_end,
+          billing_cycle_anchor: current_period_end,
+        });
+
+        //  Update the subscription details in the database if necessary
+         await Subscription.findOneAndUpdate(
+          { userId: id },
+          {
+            $set: {
+              stripeSubscriptionId: nextRequestedSubscription.id,
+              productId: newSelectedPlanId,
+              status: nextRequestedSubscription.status,
+              items: nextRequestedSubscription.items?.data,
+              currentPeriodStart: nextRequestedSubscription.current_period_start,
+              currentPeriodEnd: nextRequestedSubscription.current_period_end,
+              created: nextRequestedSubscription.created,
+              currency: nextRequestedSubscription.currency,
+              paymentMethodId: "req.body.paymentMethodId",
+            },
+          },
+          { new: true }
+        );
+
+
+        res.status(200).json({
+          message:
+            "Downgrade subscription request applied, It will start after end of current subscription",
+          // data: nextRequestedSubscription,
+        });
         // Handle Downgrade
       } else {
         // If it's an upgrade, proceed as before

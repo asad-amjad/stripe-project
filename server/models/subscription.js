@@ -8,6 +8,7 @@ const subscriptionSchema = new mongoose.Schema({
   productId: { type: String, required: true },
   // coupon: { type: String },
   status: { type: String },
+  customer: { type: String },
   currentPeriodStart: { type: String },
   currentPeriodEnd: { type: String },
   created: { type: String },
