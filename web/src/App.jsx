@@ -10,6 +10,7 @@ import Subscription from "./pages/Subscription";
 import Settings from "./pages/Settings";
 
 const App = () => {
+
   return (
     <div className="App">
       <Router>
@@ -18,6 +19,7 @@ const App = () => {
           <NavLink to="/">Subscription</NavLink>
           <NavLink to="/history">History</NavLink>
           <NavLink to="/settings">Settings</NavLink>
+          {localStorage.getItem("customerId") !== null &&<p onClick={()=>{localStorage.clear();window.location.reload()}}>Logout</p>}
         </nav>
 
         <Routes>

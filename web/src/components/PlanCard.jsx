@@ -144,7 +144,7 @@ const PlanCard = ({
       {/* <div className="text-success mt-1">
         <span style={{ fontSize: '12px' }}>canceled_at: {convertTimestampToReadable(activeSubscription?.canceled_at)}</span>
       </div> */}
-
+{/* 
       {isActive && (
         <div className="text-success mt-1">
           <span style={{ fontSize: "12px" }}>
@@ -152,7 +152,7 @@ const PlanCard = ({
             {convertTimestampToReadable(activeSubscription?.cancel_at)}
           </span>
         </div>
-      )}
+      )} */}
 
       {isActiveInQueue && (
         <div className="text-success mt-1">
