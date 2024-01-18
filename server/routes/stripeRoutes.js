@@ -7,17 +7,14 @@ const couponController = require("../controllers/couponController");
 const productController = require("../controllers/productController");
 const paymentMethodController = require("../controllers/paymentMethodController");
 const singlePaymentController = require("../controllers/singlePaymentController");
-const transactionController = require("../controllers/transactionController");
 const invoiceController = require("../controllers/invoiceController");
 const fetchRecordController = require("../controllers/fetchRecordController");
 const usageRecordMiddleware = require("../middlewares/usageRecordMiddleware");
 const authMiddleware = require("../middlewares/authMiddleware");
 
-// Customer
-// router.post("/register-customer", customerController.register);
+
 
 //Products
-// router.get("/product/:productId", productController.detail);
 router.get("/products", productController.list);
 
 // Subscriptions
@@ -28,7 +25,7 @@ router.post(
 );
 
 router.post("/cancel-subscription", subscriptionController.cancel);
-router.get("/subscriptions-list",authMiddleware, subscriptionController.list);
+router.get("/subscriptions-list", authMiddleware, subscriptionController.list);
 
 // Coupon
 router.post("/validate-coupon", couponController.validation);

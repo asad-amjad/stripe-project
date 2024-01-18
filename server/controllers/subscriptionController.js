@@ -125,13 +125,11 @@ const subscriptionController = {
       // // Check if it's a downgrade
       const isDownGrade = currentPlanAmount > newPlanAmount;
       if (isDownGrade) {
-        const current_period_end = subscription?.current_period_end;
+        const current_period_end = subscription?.currentPeriodEnd;
 
-        console.log('sad', subscription);
         // Cancelling the current subscription
         await stripe.subscriptions.update(subscription?.stripeSubscriptionId, {
-          // cancel_at: current_period_end,
-          cancel_at_period_end: true,
+          cancel_at: current_period_end,
         });
 
         // it will start at the end of the current active subscription period
@@ -150,7 +148,7 @@ const subscriptionController = {
         });
 
         //  Update the subscription details in the database if necessary
-         await Subscription.findOneAndUpdate(
+        await Subscription.findOneAndUpdate(
           { userId: id },
           {
             $set: {
@@ -158,7 +156,8 @@ const subscriptionController = {
               productId: newSelectedPlanId,
               status: nextRequestedSubscription.status,
               items: nextRequestedSubscription.items?.data,
-              currentPeriodStart: nextRequestedSubscription.current_period_start,
+              currentPeriodStart:
+                nextRequestedSubscription.current_period_start,
               currentPeriodEnd: nextRequestedSubscription.current_period_end,
               created: nextRequestedSubscription.created,
               currency: nextRequestedSubscription.currency,
@@ -168,11 +167,10 @@ const subscriptionController = {
           { new: true }
         );
 
-
         res.status(200).json({
           message:
             "Downgrade subscription request applied, It will start after end of current subscription",
-          // data: nextRequestedSubscription,
+          data: nextRequestedSubscription,
         });
         // Handle Downgrade
       } else {
