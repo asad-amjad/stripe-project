@@ -137,7 +137,7 @@ function Subscription() {
       setLoginModal(true);
     } else {
       fetchPlanDetails();
-      // fetchInvoice()
+      fetchAllProducts()
       fetchMyActiveSubscriptions();
       fetchMyDefaultPaymentMethod();
     }

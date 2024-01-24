@@ -1,17 +1,6 @@
 require("dotenv").config({ path: "./.env" });
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-const getProductPrice = async (priceId) => {
-  try {
-    const price = await stripe.prices.retrieve(priceId);
-    // console.log(price)
-    return price;
-  } catch (error) {
-    console.error("Error retrieving price:", error);
-    throw new Error("Error retrieving price");
-  }
-};
-
 const getAllProductPrice = async (product) => {
   try {
     const prices = await stripe.prices.list({
@@ -22,6 +11,26 @@ const getAllProductPrice = async (product) => {
   } catch (error) {
     console.error("Error retrieving price:", error);
     throw new Error("Error retrieving price");
+  }
+};
+
+const getPrices = async (planId) => {
+  try {
+    const prices = await stripe.prices.list({
+      product: planId,
+    });
+
+    const meteredFee = prices?.data?.find(
+      (price) => price.recurring.usage_type === "metered"
+    );
+    const licensedFee = prices?.data?.find(
+      (price) => price.recurring.usage_type === "licensed"
+    );
+
+    return { meteredFee, licensedFee, prices };
+  } catch (error) {
+    console.error("Error fetching prices:", error);
+    throw new Error("Failed to fetch prices. Please try again later.");
   }
 };
 
@@ -36,7 +45,6 @@ const productController = {
       }
 
       if (product) {
-        // const price = await stripe.prices.retrieve(product.default_price);
         const allPrices = await getAllProductPrice(product);
         const meteredFee = allPrices.find(
           (price) => price.recurring.usage_type === "metered"
@@ -50,7 +58,7 @@ const productController = {
           return k.id === product.default_price;
         });
 
-        // TO be removed
+        // TODO: be removed
         product.extended_price_details = default_price;
         product.allPrices = allPrices;
         // ==================
@@ -77,30 +85,22 @@ const productController = {
       // Fetch prices for each product
       const productsWithPrices = await Promise.all(
         products.data.map(async (product) => {
-          const allPrices = await getAllProductPrice(product);
-          const meteredFee = allPrices.find(
-            (price) => price.recurring.usage_type === "metered"
-          );
-          const licensedFee = allPrices.find(
-            (price) => price.recurring.usage_type === "licensed"
+          const { meteredFee, licensedFee, prices } = await getPrices(
+            product.id
           );
 
-          const default_price = allPrices?.find((k) => {
+          const default_price = prices?.data?.find((k) => {
             return k.id === product.default_price;
           });
 
-          // TO be removed
+          // TO be removed After ui migrate to meteredFee and licensedFee
           product.extended_price_details = default_price;
-          product.allPrices = allPrices;
+          product.allPrices = prices?.data;
           // ==================
 
           product.meteredFee = meteredFee;
           product.licensedFee = licensedFee;
-          return {
-            ...product,
-            extended_price_details: default_price,
-            allPrices: allPrices,
-          };
+          return product;
         })
       );
 
