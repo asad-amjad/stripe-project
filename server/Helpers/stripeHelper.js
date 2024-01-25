@@ -5,7 +5,6 @@ const getPrices = async (planId) => {
       const prices = await stripe.prices.list({
         product: planId,
       });
-  console.log(planId,prices)
       const meteredFee = prices?.data?.find(
         (price) => price.recurring.usage_type === "metered"
       );
